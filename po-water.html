@@ -456,6 +456,17 @@ html, body {
   .shell { padding: 16px 12px 60px; }
   .water-num { font-size: 48px; }
 }
+
+/* iPhone readability — extra breathing room inside cards + roomier text */
+@media (max-width: 640px) {
+  body { line-height: 1.55; font-size: 16px; }
+  .shell { padding: 24px 16px 72px; row-gap: 18px; }
+  .card { padding: 22px 18px; }
+  .card + .card { margin-top: 16px; }
+  .po-seg-row { gap: 10px; padding-top: 6px; padding-bottom: 6px; }
+  .po-stats-row { padding-top: 12px; padding-bottom: 12px; }
+  .section-title { margin-bottom: 14px; }
+}
 </style>
 </head>
 <body>

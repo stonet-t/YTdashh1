@@ -445,6 +445,18 @@ main {
   .stack-search-results { width: 100%; }
 }
 
+/* iPhone readability — extra breathing room inside cards + roomier text */
+@media (max-width: 640px) {
+  body { line-height: 1.55; font-size: 16px; }
+  main { padding: 44px 16px 72px; }
+  .stack-card { padding: 22px 18px 20px; }
+  .stack-card + .stack-card { margin-top: 18px; }
+  .stack-item { padding-top: 12px; padding-bottom: 12px; row-gap: 10px; }
+  .stack-item + .stack-item { margin-top: 6px; }
+  .stack-add-row { row-gap: 10px; }
+  .section + .section { margin-top: 20px; }
+}
+
 ::selection { background: rgba(224, 118, 88, 0.3); color: var(--text-primary); }
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }

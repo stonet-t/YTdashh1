@@ -1568,6 +1568,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @media (max-width: 600px) {
   .sub-auto-toggle { width: 100%; justify-content: space-between; padding: 12px 14px; }
 }
+
+/* iPhone readability — extra breathing room inside cards + roomier text */
+@media (max-width: 640px) {
+  body { line-height: 1.55; font-size: 16px; }
+  .section { margin-bottom: 24px; }
+  .nw-subcard, .ord-card, .ord-add-card, .ord-empty-card { padding: 20px 18px; }
+  .ord-card + .ord-card,
+  .nw-subcard + .nw-subcard { margin-top: 14px; }
+  .nw-row, .nw-activity-row { padding-top: 12px; padding-bottom: 12px; }
+  .nw-row + .nw-row,
+  .nw-activity-row + .nw-activity-row { margin-top: 6px; }
+  .field-row { padding-top: 10px; padding-bottom: 10px; row-gap: 10px; }
+  .ord-section-h { margin-top: 18px; margin-bottom: 12px; }
+  .section-title, .section-title-text { margin-bottom: 14px; }
+}
 </style>
 </head>
 <body>
