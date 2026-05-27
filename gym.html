@@ -1261,22 +1261,13 @@ img, video, canvas, svg { max-width: 100%; }
   .wt-compare-meta-line { font-size: 11px; }
 }
 
-/* iPhone readability — extra breathing room inside cards + roomier text */
+/* iPhone readability — modest line-height + a bit more gap between cards */
 @media (max-width: 640px) {
-  body { line-height: 1.55; font-size: 16px; }
-  .card { padding: 22px 18px; }
-  .card + .card { margin-top: 16px; }
-  .po-rx-card { padding: 20px 18px; }
-  .po-set-section { margin-bottom: 28px; }
-  .po-sub-section { margin-bottom: 22px; }
-  .po-set-row, .po-tw-row, .po-weight-row, .po-stats-row, .po-hist-row { padding-top: 12px; padding-bottom: 12px; }
-  .po-set-row + .po-set-row,
-  .po-tw-row + .po-tw-row,
-  .po-hist-row + .po-hist-row { margin-top: 8px; }
-  .po-stat-box { padding: 14px 16px; }
-  .po-seg-row { gap: 10px; }
-  .po-add-row-btn { padding-top: 12px; padding-bottom: 12px; }
-  .section-title { margin-top: 6px; margin-bottom: 14px; }
+  body { line-height: 1.5; }
+  .card + .card { margin-top: 14px; }
+  .po-set-section { margin-bottom: 22px; }
+  .po-btn, .po-mini-btn, .po-icon-btn, .po-seg-btn,
+  .po-tw-done-btn, .po-w-btn, .wt-cam-btn, .wt-edit-btn, .wt-save-btn { padding: 6px 10px; font-size: 13px; }
 }
 
 .hidden { display: none !important; }

@@ -595,18 +595,14 @@ body::after {
   .gm-progress-num { font-size: 36px; }
 }
 
-/* iPhone readability — extra breathing room inside cards + roomier text */
+/* iPhone readability — modest line-height + a bit more gap between cards */
 @media (max-width: 640px) {
-  body { line-height: 1.55; font-size: 16px; }
-  .section { margin-top: 18px; }
-  .gm-card, .gm-card-tomorrow { padding: 20px 18px; }
+  body { line-height: 1.5; }
+  .section + .section { margin-top: 14px; }
   .gm-card + .gm-card,
   .gm-card-tomorrow + .gm-card,
-  .gm-card + .gm-card-tomorrow { margin-top: 16px; }
-  .gm-row, .gm-progress-row, .goal-ticker-row { padding-top: 10px; padding-bottom: 10px; }
-  .gm-row + .gm-row,
-  .gm-progress-row + .gm-progress-row { margin-top: 8px; }
-  .gm-eyebrow { margin-bottom: 10px; }
+  .gm-card + .gm-card-tomorrow { margin-top: 12px; }
+  .gm-push-btn, .gm-queue-btn { padding: 6px 10px; font-size: 13px; }
 }
 </style>
 </head>

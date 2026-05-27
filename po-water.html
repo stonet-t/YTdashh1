@@ -457,15 +457,11 @@ html, body {
   .water-num { font-size: 48px; }
 }
 
-/* iPhone readability — extra breathing room inside cards + roomier text */
+/* iPhone readability — modest line-height + a bit more gap between cards */
 @media (max-width: 640px) {
-  body { line-height: 1.55; font-size: 16px; }
-  .shell { padding: 24px 16px 72px; row-gap: 18px; }
-  .card { padding: 22px 18px; }
-  .card + .card { margin-top: 16px; }
-  .po-seg-row { gap: 10px; padding-top: 6px; padding-bottom: 6px; }
-  .po-stats-row { padding-top: 12px; padding-bottom: 12px; }
-  .section-title { margin-bottom: 14px; }
+  body { line-height: 1.5; }
+  .card + .card { margin-top: 14px; }
+  .water-minus-btn, .water-plus-btn, .po-seg-btn { padding: 6px 10px; font-size: 13px; }
 }
 </style>
 </head>
