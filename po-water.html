@@ -567,8 +567,12 @@ html, body {
         <div class="seg" id="setUnit">
           <button data-u="bottle">Bottles</button>
           <button data-u="glass">Glasses</button>
+          <button data-u="cup">Cups</button>
           <button data-u="oz">oz</button>
           <button data-u="ml">ml</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:6px;line-height:1.4">
+          Logs are stored in mL internally — change units anytime and totals auto-convert.
         </div>
       </div>
       <div class="field-row">
@@ -579,6 +583,16 @@ html, body {
         <div class="field">
           <label>Glass size (ml)</label>
           <input type="number" id="setGlassMl" min="100" max="500" step="10">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Cup size (ml)</label>
+          <input type="number" id="setCupMl" min="100" max="500" step="10">
+        </div>
+        <div class="field">
+          <label>Daily goal override (ml)</label>
+          <input type="number" id="setGoalMl" min="0" max="10000" step="50" placeholder="auto">
         </div>
       </div>
     </div>
@@ -698,12 +712,35 @@ html, body {
     s.unit = s.unit || CONFIG.unit || 'bottle';
     s.bottleMl = s.bottleMl || CONFIG.bottleMl || 500;
     s.glassMl  = s.glassMl  || CONFIG.glassMl  || 250;
+    s.cupMl    = s.cupMl    || 240;  // standard US cup
     s.weightUnit = s.weightUnit || 'kg';
     s.profile = Object.assign({}, CONFIG.profile, s.profile || {});
     s.caffeineMgPerDay = (s.caffeineMgPerDay != null) ? s.caffeineMgPerDay : (CONFIG.caffeineMgPerDay || 200);
     s.substances = Array.isArray(s.substances) ? s.substances : (CONFIG.defaultSubstances || []);
-    s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};  // {YYYY-MM-DD: number_of_servings}
+    s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};  // {YYYY-MM-DD: ml}
+    // Optional explicit daily goal in ml. null/undefined = use computed target.
+    if (s.goalMl === '') s.goalMl = null;
+
+    // One-time migration: older builds stored logs[date] as a *count* of
+    // servings in whatever unit was active at the time. v=2 stores logs[date]
+    // as total mL drunk that day, so unit changes preserve correct totals.
+    if (s.v !== 2) {
+      const factor = unitVolForState(s);
+      Object.keys(s.logs).forEach(k => {
+        const v = s.logs[k];
+        if (typeof v === 'number') s.logs[k] = +(v * factor).toFixed(1);
+      });
+      s.v = 2;
+    }
     return s;
+  }
+  // Used during migration before `state` is assigned, so we take state in.
+  function unitVolForState(s) {
+    if (s.unit === 'bottle') return s.bottleMl || 500;
+    if (s.unit === 'glass')  return s.glassMl  || 250;
+    if (s.unit === 'cup')    return s.cupMl    || 240;
+    if (s.unit === 'oz')     return 29.5735;
+    return 1;
   }
   function saveState() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
@@ -716,13 +753,17 @@ html, body {
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
   function todayKey() { return dateKey(new Date()); }
-  function todayCount() { return state.logs[todayKey()] || 0; }
-  function setTodayCount(n) {
+  // Internal storage is mL. Public API is "count in current unit" for
+  // backward-compatible call sites — count = floor(mL / unitVolMl).
+  function todayMl() { return state.logs[todayKey()] || 0; }
+  function setTodayMl(ml) {
     const k = todayKey();
-    if (n <= 0) delete state.logs[k];
-    else state.logs[k] = n;
+    if (!ml || ml <= 0) delete state.logs[k];
+    else state.logs[k] = Math.round(ml * 10) / 10;
     saveState();
   }
+  function todayCount() { return Math.floor(todayMl() / unitVolMl()); }
+  function setTodayCount(n) { setTodayMl(Math.max(0, n) * unitVolMl()); }
 
   // ============================================================
   // CALCULATOR — daily water target in ml
@@ -743,27 +784,36 @@ html, body {
     let adjust = 0;
     if (p.sex === 'm') adjust += 200;
     if ((p.age || 0) >= 50) adjust += 100;
+    const computed = base + exercise + caffeine + subs + adjust;
+    // Explicit user override (settable from the settings UI). Lets users pick
+    // their own goal instead of letting the calculator pick one.
+    const overrideMl = (state.goalMl != null && state.goalMl > 0) ? state.goalMl : null;
     return {
       base, exercise, caffeine, subs, adjust,
-      total: base + exercise + caffeine + subs + adjust
+      total: overrideMl != null ? overrideMl : computed,
+      computed,
+      overridden: overrideMl != null,
     };
   }
 
   function unitVolMl() {
     if (state.unit === 'bottle') return state.bottleMl || 500;
     if (state.unit === 'glass')  return state.glassMl  || 250;
-    if (state.unit === 'oz')     return 30;     // 1 fl oz ≈ 29.57 ml
-    return 1;                                   // ml
+    if (state.unit === 'cup')    return state.cupMl    || 240;
+    if (state.unit === 'oz')     return 29.5735;        // 1 fl oz
+    return 1;                                           // ml
   }
   function unitLabelPlural() {
     if (state.unit === 'bottle') return 'bottles';
     if (state.unit === 'glass')  return 'glasses';
+    if (state.unit === 'cup')    return 'cups';
     if (state.unit === 'oz')     return 'oz';
     return 'ml';
   }
   function unitLabelSingular() {
     if (state.unit === 'bottle') return 'bottle';
     if (state.unit === 'glass')  return 'glass';
+    if (state.unit === 'cup')    return 'cup';
     if (state.unit === 'oz')     return 'oz';
     return 'ml';
   }
@@ -927,6 +977,8 @@ html, body {
     $('setCaffeine').value = state.caffeineMgPerDay;
     $('setBottleMl').value = state.bottleMl;
     $('setGlassMl').value = state.glassMl;
+    if ($('setCupMl'))  $('setCupMl').value  = state.cupMl;
+    if ($('setGoalMl')) $('setGoalMl').value = state.goalMl != null ? state.goalMl : '';
 
     setSegActive('setUnit', state.unit);
     setSegActive('setWeightUnit', state.weightUnit);
@@ -954,15 +1006,20 @@ html, body {
   bindSeg('setWeightUnit', 'u', (v) => { state.weightUnit = v; saveState(); renderWater(); });
   bindSeg('setSex', 's', (v) => { state.profile.sex = v; saveState(); renderWater(); });
 
-  ['setWeight','setAge','setActivity','setCaffeine','setBottleMl','setGlassMl'].forEach(id => {
-    $(id).addEventListener('input', () => {
-      const v = parseFloat($(id).value);
+  ['setWeight','setAge','setActivity','setCaffeine','setBottleMl','setGlassMl','setCupMl','setGoalMl'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const raw = el.value;
+      const v = parseFloat(raw);
       if (id === 'setWeight') state.profile.weightKg = v || 0;
       else if (id === 'setAge') state.profile.age = v || 0;
       else if (id === 'setActivity') state.profile.activityHrsPerWeek = v || 0;
       else if (id === 'setCaffeine') state.caffeineMgPerDay = v || 0;
       else if (id === 'setBottleMl') state.bottleMl = v || 500;
       else if (id === 'setGlassMl') state.glassMl = v || 250;
+      else if (id === 'setCupMl')   state.cupMl   = v || 240;
+      else if (id === 'setGoalMl')  state.goalMl  = (raw === '' || !v || v <= 0) ? null : v;
       saveState(); renderWater();
     });
   });

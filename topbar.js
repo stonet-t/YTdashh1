@@ -220,12 +220,36 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');
   }
+  function unitVolMl(state) {
+    if (!state) return 500;
+    if (state.unit === 'bottle') return state.bottleMl || 500;
+    if (state.unit === 'glass')  return state.glassMl  || 250;
+    if (state.unit === 'cup')    return state.cupMl    || 240;
+    if (state.unit === 'oz')     return 29.5735;
+    if (state.unit === 'ml')     return 1;
+    return state.bottleMl || 500;
+  }
+  // One-time mL migration mirrors po-water.html so the two stay in sync.
+  function migrateWaterState(state) {
+    if (!state || state.v === 2) return state;
+    const factor = unitVolMl(state);
+    if (state.logs && typeof state.logs === 'object') {
+      Object.keys(state.logs).forEach(k => {
+        const v = state.logs[k];
+        if (typeof v === 'number') state.logs[k] = +(v * factor).toFixed(1);
+      });
+    }
+    state.v = 2;
+    try { localStorage.setItem('po_water_v1', JSON.stringify(state)); } catch (e) {}
+    return state;
+  }
   function getWaterProgress() {
     let state = null;
     try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
-    if (!state) return { done: 0, total: 0 };
+    if (!state) return { done: 0, total: 0, doneMl: 0, totalMl: 0, unit: 'bottle' };
+    state = migrateWaterState(state);
     const todayKey = calendarDateKey();
-    const done = (state.logs || {})[todayKey] || 0;
+    const doneMl = (state.logs || {})[todayKey] || 0;
     const p = state.profile || { weightKg: 75 };
     const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
     const base = wKg * 35;
@@ -238,14 +262,12 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     let adjust = 0;
     if (p.sex === 'm') adjust += 200;
     if ((p.age || 0) >= 50) adjust += 100;
-    const totalMl = base + exercise + caffeine + subs + adjust;
-    let unitVol;
-    if (state.unit === 'glass') unitVol = state.glassMl || 250;
-    else if (state.unit === 'oz') unitVol = 30;
-    else if (state.unit === 'ml') unitVol = 1;
-    else unitVol = state.bottleMl || 500;
-    const total = Math.max(1, Math.ceil(totalMl / unitVol));
-    return { done, total };
+    const computedMl = base + exercise + caffeine + subs + adjust;
+    const totalMl = (state.goalMl != null && state.goalMl > 0) ? state.goalMl : computedMl;
+    const vol = unitVolMl(state);
+    const done = Math.floor(doneMl / vol);
+    const total = Math.max(1, Math.ceil(totalMl / vol));
+    return { done, total, doneMl, totalMl, unit: state.unit || 'bottle' };
   }
   function classifyStatus(done, total) {
     if (total === 0) return 'idle';
@@ -270,9 +292,10 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
 
   function defaultWaterState() {
     return {
-      unit: 'bottle', bottleMl: 500, glassMl: 250, weightUnit: 'kg',
+      unit: 'bottle', bottleMl: 500, glassMl: 250, cupMl: 240,
+      weightUnit: 'kg', goalMl: null,
       profile: { weightKg: 75, age: 25, sex: 'm', activityHrsPerWeek: 5 },
-      caffeineMgPerDay: 200, substances: [], logs: {}
+      caffeineMgPerDay: 200, substances: [], logs: {}, v: 2,
     };
   }
   async function pushWaterMergedToSupabase(localWater) {
@@ -296,9 +319,12 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     let state = null;
     try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
     if (!state || typeof state !== 'object') state = defaultWaterState();
+    state = migrateWaterState(state);
     state.logs = state.logs || {};
     const k = calendarDateKey();
-    state.logs[k] = (state.logs[k] || 0) + 1;
+    // Add one "unit" in the user's chosen display unit, converted to mL.
+    const vol = unitVolMl(state);
+    state.logs[k] = Math.round(((state.logs[k] || 0) + vol) * 10) / 10;
     try { localStorage.setItem('po_water_v1', JSON.stringify(state)); } catch (e) {}
     render();
     const btn = document.getElementById('topbarWaterAdd');
