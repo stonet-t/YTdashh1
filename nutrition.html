@@ -7,6 +7,8 @@
 <meta name="color-scheme" content="dark">
 <title>Nutrition</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Barcode decoder: works everywhere getUserMedia does, including iOS Safari -->
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.0/umd/index.min.js" defer></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
@@ -896,6 +898,18 @@ main {
 }
 .nu-scan-frame::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; border-radius: 5px 0 0 0; }
 .nu-scan-frame::after  { bottom: -3px; right: -3px; border-left: 0; border-top: 0; border-radius: 0 0 5px 0; }
+.nu-scan-frame.hit {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45),
+              0 0 24px rgba(110, 231, 183, 0.6) inset;
+  animation: nuScanHit 0.5s ease-out;
+}
+.nu-scan-frame.hit::before, .nu-scan-frame.hit::after { border-color: #6ee7b7; }
+@keyframes nuScanHit {
+  0%   { background: rgba(110, 231, 183, 0.05); }
+  50%  { background: rgba(110, 231, 183, 0.22); }
+  100% { background: transparent; }
+}
 .nu-scan-line {
   position: absolute;
   left: 6%; right: 6%;
@@ -2566,17 +2580,38 @@ main {
 
   // =============================================================
   // BARCODE SCANNER
-  //  Live camera scan via the native BarcodeDetector API.
-  //  Food lookup via Open Food Facts (open / CC-licensed db
-  //  with millions of products). Results cached and saved as a
-  //  custom food so future scans are instant + work offline.
+  //  Live camera scan with two decoders:
+  //    1. Native BarcodeDetector — fast path on Android Chrome.
+  //    2. ZXing — works everywhere getUserMedia does (incl. iOS Safari,
+  //       Firefox, desktop Chrome). Loaded from CDN.
+  //  Food lookup via Open Food Facts (open, public worldwide DB).
+  //  Results cached + saved as custom foods so repeat scans are
+  //  instant and work offline.
   // =============================================================
   const UPC_CACHE_KEY = 'nutrition:upc_cache';
   let scanStream = null;
-  let scanInterval = null;
+  let scanInterval = null;        // native BarcodeDetector polling
   let scanDetector = null;
+  let scanZxingReader = null;     // ZXing reader instance
   let scanning = false;
   let scanLastCode = null;
+
+  function isSecureCtx() {
+    if (window.isSecureContext) return true;
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '';
+  }
+
+  function waitForZxing(timeoutMs) {
+    return new Promise((resolve) => {
+      if (window.ZXing) return resolve(true);
+      const start = Date.now();
+      const id = setInterval(() => {
+        if (window.ZXing) { clearInterval(id); resolve(true); }
+        else if (Date.now() - start > timeoutMs) { clearInterval(id); resolve(false); }
+      }, 80);
+    });
+  }
 
   async function openScanModal() {
     const modal = $('nuScanModal');
@@ -2589,19 +2624,12 @@ main {
       setScanStatus('Camera not available on this device. Enter UPC manually below.', 'err');
       return;
     }
-    try {
-      scanStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false,
-      });
-      const video = $('nuScanVideo');
-      video.srcObject = scanStream;
-      await video.play();
-    } catch (e) {
-      setScanStatus('Camera permission denied. You can still enter a UPC manually.', 'err');
+    if (!isSecureCtx()) {
+      setScanStatus('Camera needs HTTPS or localhost. Open the dashboard over https:// to scan, or enter a UPC manually.', 'err');
       return;
     }
 
+    // Path A — native BarcodeDetector (Android Chrome). Fast.
     if ('BarcodeDetector' in window) {
       try {
         scanDetector = new window.BarcodeDetector({
@@ -2610,28 +2638,126 @@ main {
       } catch (e) {
         try { scanDetector = new window.BarcodeDetector(); } catch (e2) { scanDetector = null; }
       }
-    } else {
-      scanDetector = null;
     }
-
     if (scanDetector) {
+      try {
+        scanStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+      } catch (e) {
+        setScanStatus(cameraErrorMessage(e), 'err');
+        return;
+      }
+      const video = $('nuScanVideo');
+      video.srcObject = scanStream;
+      try { await video.play(); } catch (e) {}
       setScanStatus('Point camera at a barcode', '');
       scanning = true;
       if (scanInterval) clearInterval(scanInterval);
-      scanInterval = setInterval(tryDetect, 240);
-    } else {
-      setScanStatus('Live scanning not supported on this browser — type the UPC below.', 'err');
+      scanInterval = setInterval(tryDetectNative, 220);
+      return;
     }
+
+    // Path B — ZXing. Used everywhere else (iOS Safari, Firefox, desktop Chrome).
+    setScanStatus('Loading decoder…', '');
+    const ok = await waitForZxing(8000);
+    if (!ok || !window.ZXing) {
+      setScanStatus('Decoder failed to load. Check your connection and enter UPC manually.', 'err');
+      return;
+    }
+    try {
+      const hints = new Map();
+      const fmts = window.ZXing.DecodeHintType
+        ? [
+            window.ZXing.BarcodeFormat.EAN_13,
+            window.ZXing.BarcodeFormat.EAN_8,
+            window.ZXing.BarcodeFormat.UPC_A,
+            window.ZXing.BarcodeFormat.UPC_E,
+            window.ZXing.BarcodeFormat.CODE_128,
+            window.ZXing.BarcodeFormat.CODE_39,
+            window.ZXing.BarcodeFormat.ITF,
+            window.ZXing.BarcodeFormat.CODABAR,
+          ]
+        : null;
+      if (fmts) hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
+      hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
+      scanZxingReader = new window.ZXing.BrowserMultiFormatReader(hints, 250);
+      scanning = true;
+      const video = $('nuScanVideo');
+      setScanStatus('Point camera at a barcode', '');
+      // Prefer the rear camera explicitly when the device exposes labels.
+      let deviceId = null;
+      try {
+        const devices = await scanZxingReader.listVideoInputDevices();
+        if (devices && devices.length) {
+          const rear = devices.find(d => /back|rear|environment/i.test(d.label || ''));
+          deviceId = (rear || devices[devices.length - 1]).deviceId;
+        }
+      } catch (e) {}
+      const decodeCb = (result, err) => {
+        if (!scanning) return;
+        if (result) {
+          const code = result.getText();
+          if (!code || code === scanLastCode) return;
+          scanLastCode = code;
+          flashScanFrame();
+          if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e2) {} }
+          scanning = false;
+          onBarcodeDetected(code);
+        }
+        // err is a NotFoundException every frame ZXing fails to decode — ignore.
+      };
+      if (deviceId) {
+        await scanZxingReader.decodeFromVideoDevice(deviceId, video, decodeCb);
+      } else {
+        await scanZxingReader.decodeFromConstraints(
+          { video: { facingMode: { ideal: 'environment' } }, audio: false },
+          video, decodeCb
+        );
+      }
+      // Hold the underlying stream so the modal-close cleanup can stop tracks
+      // even if ZXing's internal handle is dropped.
+      try { scanStream = video.srcObject; } catch (e) {}
+    } catch (e) {
+      setScanStatus(cameraErrorMessage(e), 'err');
+    }
+  }
+
+  function cameraErrorMessage(e) {
+    if (!e) return 'Camera failed to start.';
+    const n = e.name || '';
+    if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
+      return 'Camera permission denied. Enter a UPC manually below.';
+    }
+    if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
+      return 'No camera found on this device.';
+    }
+    if (n === 'NotReadableError' || n === 'TrackStartError') {
+      return 'Camera is busy. Close other apps using it and try again.';
+    }
+    if (n === 'OverconstrainedError') {
+      return 'Rear camera unavailable. Tap close, then reopen.';
+    }
+    return 'Camera failed to start (' + (n || 'unknown') + '). Enter UPC manually.';
+  }
+
+  function flashScanFrame() {
+    const frame = document.querySelector('#nuScanModal .nu-scan-frame');
+    if (!frame) return;
+    frame.classList.add('hit');
+    setTimeout(() => frame.classList.remove('hit'), 500);
   }
 
   function setScanStatus(msg, cls) {
     const el = $('nuScanStatus');
+    if (!el) return;
     el.textContent = msg;
     el.classList.remove('err', 'ok');
     if (cls) el.classList.add(cls);
   }
 
-  async function tryDetect() {
+  async function tryDetectNative() {
     if (!scanning || !scanDetector) return;
     const video = $('nuScanVideo');
     if (!video || video.readyState < 2) return;
@@ -2642,6 +2768,7 @@ main {
         if (!code || code === scanLastCode) return;
         scanLastCode = code;
         scanning = false;
+        flashScanFrame();
         if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
         await onBarcodeDetected(code);
       }
@@ -2652,12 +2779,17 @@ main {
     $('nuScanModal').classList.remove('show');
     scanning = false;
     if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+    if (scanZxingReader) {
+      try { scanZxingReader.reset(); } catch (e) {}
+      scanZxingReader = null;
+    }
     if (scanStream) {
       try { scanStream.getTracks().forEach(t => t.stop()); } catch (e) {}
       scanStream = null;
     }
     const video = $('nuScanVideo');
     if (video) { try { video.pause(); video.srcObject = null; } catch (e) {} }
+    scanDetector = null;
   }
 
   async function onBarcodeDetected(code) {
