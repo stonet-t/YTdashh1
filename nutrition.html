@@ -7,8 +7,6 @@
 <meta name="color-scheme" content="dark">
 <title>Nutrition</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Barcode decoder: works everywhere getUserMedia does, including iOS Safari -->
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.0/umd/index.min.js" defer></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
@@ -866,82 +864,115 @@ main {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.nu-scan-stage {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 4/3;
-  background: #000;
-  overflow: hidden;
+.nu-scan-pane {
+  padding: 22px 22px 26px;
 }
-.nu-scan-video {
-  width: 100%; height: 100%;
-  object-fit: cover;
+.nu-scan-pick-icon {
+  font-size: 48px;
+  text-align: center;
+  margin: 4px 0 12px;
+}
+.nu-scan-pick-text {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+.nu-scan-pick-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.nu-scan-pick-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nu-scan-pick-tip {
+  margin-top: 14px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+.nu-scan-preview-wrap {
+  width: 100%;
+  max-height: 280px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+.nu-scan-preview {
+  width: 100%; height: auto;
+  max-height: 280px;
+  object-fit: contain;
   display: block;
 }
-.nu-scan-overlay {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  pointer-events: none;
+.nu-scan-progress-track {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
 }
-.nu-scan-frame {
-  width: 72%; height: 38%;
-  border: 2px solid rgba(255,255,255,0.85);
-  border-radius: 14px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
-  position: relative;
-}
-.nu-scan-frame::before, .nu-scan-frame::after {
-  content: '';
-  position: absolute;
-  width: 18px; height: 18px;
-  border: 3px solid var(--accent);
-}
-.nu-scan-frame::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; border-radius: 5px 0 0 0; }
-.nu-scan-frame::after  { bottom: -3px; right: -3px; border-left: 0; border-top: 0; border-radius: 0 0 5px 0; }
-.nu-scan-frame.hit {
-  border-color: #6ee7b7;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45),
-              0 0 24px rgba(110, 231, 183, 0.6) inset;
-  animation: nuScanHit 0.5s ease-out;
-}
-.nu-scan-frame.hit::before, .nu-scan-frame.hit::after { border-color: #6ee7b7; }
-@keyframes nuScanHit {
-  0%   { background: rgba(110, 231, 183, 0.05); }
-  50%  { background: rgba(110, 231, 183, 0.22); }
-  100% { background: transparent; }
-}
-.nu-scan-line {
-  position: absolute;
-  left: 6%; right: 6%;
-  top: 50%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 8px var(--accent-glow);
-  animation: nuScanSweep 2.2s ease-in-out infinite;
-}
-@keyframes nuScanSweep {
-  0%   { transform: translateY(-60px); opacity: 0.2; }
-  50%  { transform: translateY( 60px); opacity: 1; }
-  100% { transform: translateY(-60px); opacity: 0.2; }
+.nu-scan-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), #7DD3FC);
+  border-radius: 3px;
+  transition: width 0.25s ease;
 }
 .nu-scan-status {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-secondary);
   letter-spacing: 0.04em;
-  padding: 14px 22px 6px;
   text-align: center;
 }
 .nu-scan-status.err { color: var(--bad); }
 .nu-scan-status.ok  { color: var(--accent); }
-.nu-scan-body {
-  padding: 6px 22px 22px;
+.nu-scan-summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  text-align: center;
 }
-.nu-scan-manual-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  margin-top: 10px;
+.nu-scan-raw {
+  margin: 12px 0 6px;
+}
+.nu-scan-raw summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+.nu-scan-raw pre {
+  margin-top: 8px;
+  max-height: 160px;
+  overflow: auto;
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .nu-scan-btn {
@@ -1115,7 +1146,7 @@ main {
       <input type="text" class="nu-input" id="nuFoodSearch" placeholder="Search built-in + custom foods…" autocomplete="off">
       <div class="nu-search-results" id="nuFoodResults"></div>
       <div class="nu-btn-row">
-        <button class="nu-btn" id="nuFoodScanBtn" style="background: rgba(125, 211, 252, 0.14); color: #7DD3FC; border: 1px solid rgba(125, 211, 252, 0.28);">📷 Scan barcode</button>
+        <button class="nu-btn" id="nuFoodScanBtn" style="background: rgba(125, 211, 252, 0.14); color: #7DD3FC; border: 1px solid rgba(125, 211, 252, 0.28);">📸 Scan label</button>
         <button class="nu-btn nu-btn-ghost" id="nuFoodNewBtn">+ Custom</button>
         <button class="nu-btn nu-btn-ghost" id="nuFoodUpcBtn">Type UPC</button>
       </div>
@@ -1347,27 +1378,94 @@ main {
   </div>
 </div>
 
-<!-- BARCODE SCAN MODAL -->
+<!-- PHOTO LABEL SCAN MODAL -->
 <div class="nu-modal-bg" id="nuScanModal">
   <div class="nu-modal nu-scan-modal">
     <div class="nu-scan-head">
-      <h3>Scan barcode</h3>
+      <h3 id="nuScanTitle">Scan nutrition label</h3>
       <button class="nu-scan-close" id="nuScanCloseBtn" aria-label="Close">×</button>
     </div>
-    <div class="nu-scan-stage">
-      <video class="nu-scan-video" id="nuScanVideo" playsinline muted autoplay></video>
-      <div class="nu-scan-overlay">
-        <div class="nu-scan-frame">
-          <div class="nu-scan-line"></div>
-        </div>
+
+    <!-- Stage 1: pick a source -->
+    <div class="nu-scan-pane" id="nuScanPick">
+      <div class="nu-scan-pick-icon">📸</div>
+      <div class="nu-scan-pick-text">
+        Snap any nutrition facts panel — we'll read it on-device and pre-fill the macros.
+      </div>
+      <div class="nu-scan-pick-row">
+        <label class="nu-btn nu-scan-pick-btn">
+          Take photo
+          <input type="file" id="nuScanCamera" accept="image/*" capture="environment" hidden>
+        </label>
+        <label class="nu-btn nu-btn-ghost nu-scan-pick-btn">
+          Choose file
+          <input type="file" id="nuScanFile" accept="image/*" hidden>
+        </label>
+      </div>
+      <div class="nu-scan-pick-tip">
+        Tip: fill the frame with the label, hold steady, avoid glare.
       </div>
     </div>
-    <div class="nu-scan-status" id="nuScanStatus">Starting camera…</div>
-    <div class="nu-scan-body">
-      <div class="nu-label">Or type the UPC</div>
-      <div class="nu-scan-manual-row">
-        <input type="text" class="nu-input nu-input-mono" id="nuScanManual" placeholder="0000000000000" inputmode="numeric" autocomplete="off">
-        <button class="nu-btn" id="nuScanManualBtn">Look up</button>
+
+    <!-- Stage 2: processing -->
+    <div class="nu-scan-pane" id="nuScanProcess" hidden>
+      <div class="nu-scan-preview-wrap">
+        <img class="nu-scan-preview" id="nuScanPreview" alt="Captured label">
+      </div>
+      <div class="nu-scan-progress-track">
+        <div class="nu-scan-progress-fill" id="nuScanProgressFill"></div>
+      </div>
+      <div class="nu-scan-status" id="nuScanStatus">Preparing…</div>
+    </div>
+
+    <!-- Stage 3: review -->
+    <div class="nu-scan-pane" id="nuScanReview" hidden>
+      <div class="nu-scan-summary" id="nuScanSummary">Detected — review and edit if needed.</div>
+      <div class="nu-label">Name</div>
+      <input type="text" class="nu-input" id="nuScanName" placeholder="What is this food?">
+      <div class="nu-label">Serving</div>
+      <input type="text" class="nu-input" id="nuScanServing" placeholder="e.g. 1 cup (100 g)">
+      <div class="nu-row two">
+        <div>
+          <div class="nu-label">Calories</div>
+          <input type="number" step="1" class="nu-input nu-input-mono" id="nuScanKcal" placeholder="kcal">
+        </div>
+        <div>
+          <div class="nu-label">Protein</div>
+          <input type="number" step="0.1" class="nu-input nu-input-mono" id="nuScanProtein" placeholder="g">
+        </div>
+      </div>
+      <div class="nu-row three">
+        <div>
+          <div class="nu-label">Carbs</div>
+          <input type="number" step="0.1" class="nu-input nu-input-mono" id="nuScanCarbs" placeholder="g">
+        </div>
+        <div>
+          <div class="nu-label">Fat</div>
+          <input type="number" step="0.1" class="nu-input nu-input-mono" id="nuScanFat" placeholder="g">
+        </div>
+        <div>
+          <div class="nu-label">Fiber</div>
+          <input type="number" step="0.1" class="nu-input nu-input-mono" id="nuScanFiber" placeholder="g">
+        </div>
+      </div>
+      <div class="nu-row two">
+        <div>
+          <div class="nu-label">Sugar</div>
+          <input type="number" step="0.1" class="nu-input nu-input-mono" id="nuScanSugar" placeholder="g">
+        </div>
+        <div>
+          <div class="nu-label">Sodium</div>
+          <input type="number" step="1" class="nu-input nu-input-mono" id="nuScanSodium" placeholder="mg">
+        </div>
+      </div>
+      <details class="nu-scan-raw">
+        <summary>Show raw OCR text</summary>
+        <pre id="nuScanRaw"></pre>
+      </details>
+      <div class="nu-btn-row">
+        <button class="nu-btn nu-btn-ghost" id="nuScanRescan">Scan another</button>
+        <button class="nu-btn" id="nuScanAddBtn">Add to today</button>
       </div>
     </div>
   </div>
@@ -2472,17 +2570,25 @@ main {
     $('nuFoodUpcBtn').addEventListener('click', () => { $('nuUpcInput').value = ''; $('nuUpcModal').classList.add('show'); });
     $('nuFoodScanBtn').addEventListener('click', () => openScanModal());
 
-    // Scan modal
+    // Photo-label scanner — capture + file pickers feed the same handler.
     $('nuScanCloseBtn').addEventListener('click', closeScanModal);
-    $('nuScanManualBtn').addEventListener('click', async () => {
-      const v = $('nuScanManual').value.trim();
-      if (!v) { toast('Enter a UPC'); return; }
-      setScanStatus('Looking up ' + v + '…', '');
-      await onBarcodeDetected(v);
+    $('nuScanCamera').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleScanFile(f);
     });
-    $('nuScanManual').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') $('nuScanManualBtn').click();
+    $('nuScanFile').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleScanFile(f);
     });
+    $('nuScanRescan').addEventListener('click', () => {
+      $('nuScanCamera').value = '';
+      $('nuScanFile').value = '';
+      setScanProgress(0);
+      scanParsed = null;
+      scanRawText = '';
+      showScanPane('pick');
+    });
+    $('nuScanAddBtn').addEventListener('click', commitScanReview);
 
     // Apple flip
     const stage = $('nuAppleStage');
@@ -2579,176 +2685,26 @@ main {
   }
 
   // =============================================================
-  // BARCODE SCANNER
-  //  Live camera scan with two decoders:
-  //    1. Native BarcodeDetector — fast path on Android Chrome.
-  //    2. ZXing — works everywhere getUserMedia does (incl. iOS Safari,
-  //       Firefox, desktop Chrome). Loaded from CDN.
-  //  Food lookup via Open Food Facts (open, public worldwide DB).
-  //  Results cached + saved as custom foods so repeat scans are
-  //  instant and work offline.
+  // PHOTO LABEL SCANNER
+  //  Take a photo of any nutrition facts panel — Tesseract.js v5
+  //  runs OCR fully on-device, regex parses the macros, user
+  //  reviews + confirms, then it lands in the existing Add Food
+  //  modal and is saved as a custom food for re-use.
+  //  Manual-UPC + Open Food Facts lookup is still available
+  //  through the separate "Type UPC" button on the Foods panel.
   // =============================================================
   const UPC_CACHE_KEY = 'nutrition:upc_cache';
-  let scanStream = null;
-  let scanInterval = null;        // native BarcodeDetector polling
-  let scanDetector = null;
-  let scanZxingReader = null;     // ZXing reader instance
-  let scanning = false;
-  let scanLastCode = null;
+  const TESSERACT_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js';
+  let tesseractLoadPromise = null;
+  let scanParsed = null;
+  let scanRawText = '';
 
-  function isSecureCtx() {
-    if (window.isSecureContext) return true;
-    const h = location.hostname;
-    return h === 'localhost' || h === '127.0.0.1' || h === '';
-  }
-
-  function waitForZxing(timeoutMs) {
-    return new Promise((resolve) => {
-      if (window.ZXing) return resolve(true);
-      const start = Date.now();
-      const id = setInterval(() => {
-        if (window.ZXing) { clearInterval(id); resolve(true); }
-        else if (Date.now() - start > timeoutMs) { clearInterval(id); resolve(false); }
-      }, 80);
+  function showScanPane(name) {
+    ['Pick', 'Process', 'Review'].forEach(n => {
+      const el = $('nuScan' + n);
+      if (el) el.hidden = (n.toLowerCase() !== name);
     });
   }
-
-  async function openScanModal() {
-    const modal = $('nuScanModal');
-    modal.classList.add('show');
-    $('nuScanManual').value = '';
-    scanLastCode = null;
-    setScanStatus('Starting camera…', '');
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setScanStatus('Camera not available on this device. Enter UPC manually below.', 'err');
-      return;
-    }
-    if (!isSecureCtx()) {
-      setScanStatus('Camera needs HTTPS or localhost. Open the dashboard over https:// to scan, or enter a UPC manually.', 'err');
-      return;
-    }
-
-    // Path A — native BarcodeDetector (Android Chrome). Fast.
-    if ('BarcodeDetector' in window) {
-      try {
-        scanDetector = new window.BarcodeDetector({
-          formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar'],
-        });
-      } catch (e) {
-        try { scanDetector = new window.BarcodeDetector(); } catch (e2) { scanDetector = null; }
-      }
-    }
-    if (scanDetector) {
-      try {
-        scanStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } },
-          audio: false,
-        });
-      } catch (e) {
-        setScanStatus(cameraErrorMessage(e), 'err');
-        return;
-      }
-      const video = $('nuScanVideo');
-      video.srcObject = scanStream;
-      try { await video.play(); } catch (e) {}
-      setScanStatus('Point camera at a barcode', '');
-      scanning = true;
-      if (scanInterval) clearInterval(scanInterval);
-      scanInterval = setInterval(tryDetectNative, 220);
-      return;
-    }
-
-    // Path B — ZXing. Used everywhere else (iOS Safari, Firefox, desktop Chrome).
-    setScanStatus('Loading decoder…', '');
-    const ok = await waitForZxing(8000);
-    if (!ok || !window.ZXing) {
-      setScanStatus('Decoder failed to load. Check your connection and enter UPC manually.', 'err');
-      return;
-    }
-    try {
-      const hints = new Map();
-      const fmts = window.ZXing.DecodeHintType
-        ? [
-            window.ZXing.BarcodeFormat.EAN_13,
-            window.ZXing.BarcodeFormat.EAN_8,
-            window.ZXing.BarcodeFormat.UPC_A,
-            window.ZXing.BarcodeFormat.UPC_E,
-            window.ZXing.BarcodeFormat.CODE_128,
-            window.ZXing.BarcodeFormat.CODE_39,
-            window.ZXing.BarcodeFormat.ITF,
-            window.ZXing.BarcodeFormat.CODABAR,
-          ]
-        : null;
-      if (fmts) hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
-      hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
-      scanZxingReader = new window.ZXing.BrowserMultiFormatReader(hints, 250);
-      scanning = true;
-      const video = $('nuScanVideo');
-      setScanStatus('Point camera at a barcode', '');
-      // Prefer the rear camera explicitly when the device exposes labels.
-      let deviceId = null;
-      try {
-        const devices = await scanZxingReader.listVideoInputDevices();
-        if (devices && devices.length) {
-          const rear = devices.find(d => /back|rear|environment/i.test(d.label || ''));
-          deviceId = (rear || devices[devices.length - 1]).deviceId;
-        }
-      } catch (e) {}
-      const decodeCb = (result, err) => {
-        if (!scanning) return;
-        if (result) {
-          const code = result.getText();
-          if (!code || code === scanLastCode) return;
-          scanLastCode = code;
-          flashScanFrame();
-          if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e2) {} }
-          scanning = false;
-          onBarcodeDetected(code);
-        }
-        // err is a NotFoundException every frame ZXing fails to decode — ignore.
-      };
-      if (deviceId) {
-        await scanZxingReader.decodeFromVideoDevice(deviceId, video, decodeCb);
-      } else {
-        await scanZxingReader.decodeFromConstraints(
-          { video: { facingMode: { ideal: 'environment' } }, audio: false },
-          video, decodeCb
-        );
-      }
-      // Hold the underlying stream so the modal-close cleanup can stop tracks
-      // even if ZXing's internal handle is dropped.
-      try { scanStream = video.srcObject; } catch (e) {}
-    } catch (e) {
-      setScanStatus(cameraErrorMessage(e), 'err');
-    }
-  }
-
-  function cameraErrorMessage(e) {
-    if (!e) return 'Camera failed to start.';
-    const n = e.name || '';
-    if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
-      return 'Camera permission denied. Enter a UPC manually below.';
-    }
-    if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
-      return 'No camera found on this device.';
-    }
-    if (n === 'NotReadableError' || n === 'TrackStartError') {
-      return 'Camera is busy. Close other apps using it and try again.';
-    }
-    if (n === 'OverconstrainedError') {
-      return 'Rear camera unavailable. Tap close, then reopen.';
-    }
-    return 'Camera failed to start (' + (n || 'unknown') + '). Enter UPC manually.';
-  }
-
-  function flashScanFrame() {
-    const frame = document.querySelector('#nuScanModal .nu-scan-frame');
-    if (!frame) return;
-    frame.classList.add('hit');
-    setTimeout(() => frame.classList.remove('hit'), 500);
-  }
-
   function setScanStatus(msg, cls) {
     const el = $('nuScanStatus');
     if (!el) return;
@@ -2756,71 +2712,223 @@ main {
     el.classList.remove('err', 'ok');
     if (cls) el.classList.add(cls);
   }
-
-  async function tryDetectNative() {
-    if (!scanning || !scanDetector) return;
-    const video = $('nuScanVideo');
-    if (!video || video.readyState < 2) return;
-    try {
-      const codes = await scanDetector.detect(video);
-      if (codes && codes.length > 0) {
-        const code = codes[0].rawValue;
-        if (!code || code === scanLastCode) return;
-        scanLastCode = code;
-        scanning = false;
-        flashScanFrame();
-        if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
-        await onBarcodeDetected(code);
-      }
-    } catch (e) {}
+  function setScanProgress(p) {
+    const el = $('nuScanProgressFill');
+    if (!el) return;
+    const pct = Math.max(0, Math.min(1, p || 0)) * 100;
+    el.style.width = pct.toFixed(1) + '%';
   }
 
+  function openScanModal() {
+    const modal = $('nuScanModal');
+    modal.classList.add('show');
+    $('nuScanCamera').value = '';
+    $('nuScanFile').value = '';
+    setScanProgress(0);
+    setScanStatus('Preparing…', '');
+    showScanPane('pick');
+    scanParsed = null;
+    scanRawText = '';
+  }
   function closeScanModal() {
     $('nuScanModal').classList.remove('show');
-    scanning = false;
-    if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
-    if (scanZxingReader) {
-      try { scanZxingReader.reset(); } catch (e) {}
-      scanZxingReader = null;
-    }
-    if (scanStream) {
-      try { scanStream.getTracks().forEach(t => t.stop()); } catch (e) {}
-      scanStream = null;
-    }
-    const video = $('nuScanVideo');
-    if (video) { try { video.pause(); video.srcObject = null; } catch (e) {} }
-    scanDetector = null;
+    setScanProgress(0);
   }
 
-  async function onBarcodeDetected(code) {
-    setScanStatus('Found ' + code + ' — looking up…', 'ok');
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = TESSERACT_CDN;
+      s.async = true;
+      s.onload = () => window.Tesseract ? resolve(window.Tesseract) : reject(new Error('Tesseract not available after load'));
+      s.onerror = () => reject(new Error('Failed to load OCR engine'));
+      document.head.appendChild(s);
+    });
+    return tesseractLoadPromise;
+  }
+
+  // Downscale very large images so OCR is faster and uses less memory.
+  // Keeps the long side around 1600 px which is plenty for label text.
+  async function preprocessImage(file) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error || new Error('read failed'));
+      r.readAsDataURL(file);
+    });
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Could not load image'));
+      i.src = dataUrl;
+    });
+    const MAX = 1600;
+    let { naturalWidth: w, naturalHeight: h } = img;
+    if (w <= MAX && h <= MAX) return { dataUrl, displayUrl: dataUrl };
+    const ratio = Math.min(MAX / w, MAX / h);
+    const cw = Math.round(w * ratio), ch = Math.round(h * ratio);
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, cw, ch);
+    const scaled = canvas.toDataURL('image/jpeg', 0.92);
+    return { dataUrl: scaled, displayUrl: scaled };
+  }
+
+  async function handleScanFile(file) {
+    if (!file) return;
+    showScanPane('process');
+    setScanProgress(0);
+    setScanStatus('Resizing image…', '');
+    let prepped;
+    try {
+      prepped = await preprocessImage(file);
+    } catch (e) {
+      setScanStatus(e.message || 'Could not read that image', 'err');
+      return;
+    }
+    $('nuScanPreview').src = prepped.displayUrl;
+
+    setScanStatus('Loading OCR engine…', '');
+    let Tess;
+    try {
+      Tess = await loadTesseract();
+    } catch (e) {
+      setScanStatus('OCR engine failed to load — check your connection.', 'err');
+      return;
+    }
+
+    setScanStatus('Reading label…', '');
+    try {
+      const result = await Tess.recognize(prepped.dataUrl, 'eng', {
+        logger: (m) => {
+          if (m && m.status === 'recognizing text' && typeof m.progress === 'number') {
+            setScanProgress(m.progress);
+            setScanStatus('Reading label… ' + Math.round(m.progress * 100) + '%', '');
+          } else if (m && m.status) {
+            setScanStatus(m.status.charAt(0).toUpperCase() + m.status.slice(1) + '…', '');
+          }
+        },
+      });
+      scanRawText = (result && result.data && result.data.text) || '';
+      scanParsed = parseLabelText(scanRawText);
+      fillScanReview(scanParsed);
+      showScanPane('review');
+    } catch (e) {
+      setScanStatus('OCR failed: ' + (e.message || 'unknown'), 'err');
+    }
+  }
+
+  // Pull macro values out of OCR text using a tolerant regex set.
+  // Real-world labels have inconsistent spacing, colons, dashes, and
+  // OCR introduces extra noise — so each pattern is loose but anchored.
+  function parseLabelText(raw) {
+    const text = String(raw || '')
+      .replace(/[|]/g, '\n')
+      .replace(/[ ]/g, ' ');
+    const flat = text.replace(/\s+/g, ' ');
+    const out = { kcal: null, p: null, c: null, f: null, fib: null, sugar: null, sodium: null, serving: null };
+
+    function pickNum(re, str) {
+      const m = (str || flat).match(re);
+      if (!m) return null;
+      const n = parseFloat(m[1]);
+      return isNaN(n) ? null : n;
+    }
+
+    out.kcal   = pickNum(/(?:calories|kcal|energy)[^\d-]{0,20}(\d{1,4})/i);
+    out.p      = pickNum(/protein[^\d-]{0,20}(\d+(?:\.\d+)?)\s*g\b/i);
+    out.c      = pickNum(/(?:total\s+)?carbo(?:hydrate)?s?[^\d-]{0,20}(\d+(?:\.\d+)?)\s*g\b/i);
+    out.f      = pickNum(/(?:total\s+)?fat[^\d-]{0,20}(\d+(?:\.\d+)?)\s*g\b/i);
+    out.fib    = pickNum(/(?:dietary\s+)?fib(?:re|er)[^\d-]{0,20}(\d+(?:\.\d+)?)\s*g\b/i);
+    out.sugar  = pickNum(/(?:total\s+|added\s+)?sugars?[^\d-]{0,20}(\d+(?:\.\d+)?)\s*g\b/i);
+    out.sodium = pickNum(/sodium[^\d-]{0,20}(\d+(?:\.\d+)?)\s*mg\b/i);
+
+    // Serving size: prefer the per-line capture so we don't gobble the
+    // next nutrition row.
+    const lines = text.split(/\n+/);
+    for (const ln of lines) {
+      const m = ln.match(/serving\s*size\s*[:\-]?\s*(.+?)$/i);
+      if (m && m[1] && m[1].trim().length > 1) {
+        out.serving = m[1].replace(/\s+/g, ' ').trim();
+        break;
+      }
+    }
+    if (!out.serving) {
+      const m = flat.match(/serving\s*size\s*[:\-]?\s*([^\.()]+?)(?:\s+(?:amount|calories|servings)|$)/i);
+      if (m) out.serving = m[1].replace(/\s+/g, ' ').trim();
+    }
+    return out;
+  }
+
+  function fillScanReview(p) {
+    p = p || {};
+    const filled = ['kcal','p','c','f','fib','sugar','sodium','serving'].filter(k => p[k] != null).length;
+    $('nuScanSummary').textContent =
+      filled === 0 ? 'No values detected — enter them manually below.' :
+      'Detected ' + filled + ' field' + (filled === 1 ? '' : 's') + ' — review and edit if needed.';
+    $('nuScanName').value    = '';
+    $('nuScanServing').value = p.serving || '1 serving';
+    $('nuScanKcal').value    = p.kcal    != null ? p.kcal   : '';
+    $('nuScanProtein').value = p.p       != null ? p.p      : '';
+    $('nuScanCarbs').value   = p.c       != null ? p.c      : '';
+    $('nuScanFat').value     = p.f       != null ? p.f      : '';
+    $('nuScanFiber').value   = p.fib     != null ? p.fib    : '';
+    $('nuScanSugar').value   = p.sugar   != null ? p.sugar  : '';
+    $('nuScanSodium').value  = p.sodium  != null ? p.sodium : '';
+    $('nuScanRaw').textContent = scanRawText || '(no OCR text)';
+    setTimeout(() => { try { $('nuScanName').focus(); } catch (e) {} }, 80);
+  }
+
+  function commitScanReview() {
+    const name = $('nuScanName').value.trim();
+    if (!name) { toast('Name required'); return; }
+    const kcal = parseFloat($('nuScanKcal').value);
+    if (!isFinite(kcal) || kcal < 0) { toast('Calories required'); return; }
+    const food = {
+      id: newId(),
+      name,
+      serving: $('nuScanServing').value.trim() || '1 serving',
+      upc: '',
+      source: 'ocr',
+      kcal:   round1(kcal),
+      p:      round1(parseFloat($('nuScanProtein').value) || 0),
+      c:      round1(parseFloat($('nuScanCarbs').value)   || 0),
+      f:      round1(parseFloat($('nuScanFat').value)     || 0),
+      fib:    round1(parseFloat($('nuScanFiber').value)   || 0),
+      sugar:  round1(parseFloat($('nuScanSugar').value)   || 0),
+      sodium: round1(parseFloat($('nuScanSodium').value)  || 0),
+      ts: Date.now(),
+    };
+    // Save as a custom food so it's searchable / reusable later.
+    const all = getCustomFoods();
+    all.push(food);
+    setCustomFoods(all);
+    const meal = addPendingMeal;
+    closeScanModal();
+    openAddModal(food, 'custom');
+    if (meal) addPendingMeal = meal;
+  }
+
+  // ----- Manual UPC fallback (kept for products with a known barcode) -----
+  async function manualUpcLookup(code) {
+    if (!code) return;
+    toast('Looking up ' + code + '…');
     const food = await lookupBarcode(code);
     if (food) {
-      closeScanModal();
-      const meal = addPendingMeal;
       openAddModal(food, 'custom');
-      // restore pending meal so the default add lands there if user taps a meal
-      if (meal) addPendingMeal = meal;
     } else {
-      setScanStatus('No match for ' + code + '. Try again or add it manually.', 'err');
-      // Resume scanning after a short pause so user can re-aim.
-      setTimeout(() => {
-        scanLastCode = null;
-        scanning = true;
-        setScanStatus('Point camera at a barcode', '');
-      }, 1400);
+      toast('No match. Try the photo scanner instead.');
     }
   }
 
   async function lookupBarcode(code) {
     if (!code) return null;
     const trimmed = String(code).trim();
-
-    // 1. Memory cache in localStorage.
     const cache = storeGet(UPC_CACHE_KEY, {}) || {};
     if (cache[trimmed]) return cache[trimmed];
-
-    // 2. User's existing custom foods (manual entries or prior scans).
     const customs = getCustomFoods();
     const existing = customs.find(f => f.upc === trimmed);
     if (existing) {
@@ -2828,8 +2936,6 @@ main {
       storeSet(UPC_CACHE_KEY, cache);
       return existing;
     }
-
-    // 3. Open Food Facts — public worldwide product database.
     try {
       const resp = await fetch(
         'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(trimmed) + '.json'
@@ -2838,8 +2944,6 @@ main {
       const data = await resp.json();
       if (!data || data.status !== 1 || !data.product) return null;
       const food = buildFoodFromOFF(data.product, trimmed);
-      // Save to user's custom foods so future scans are instant + offline,
-      // and the item shows up in search results.
       const all = getCustomFoods();
       all.push(food);
       setCustomFoods(all);
@@ -2847,7 +2951,6 @@ main {
       storeSet(UPC_CACHE_KEY, cache);
       return food;
     } catch (e) {}
-
     return null;
   }
 
