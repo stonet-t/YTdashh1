@@ -309,6 +309,12 @@ main {
   padding: 6px 4px 8px;
   font-style: italic;
 }
+.nu-meal-add-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: stretch;
+}
 .nu-meal-add {
   width: 100%;
   padding: 9px;
@@ -322,6 +328,18 @@ main {
   -webkit-tap-highlight-color: transparent;
 }
 .nu-meal-add:active { background: var(--bg-input-focus); }
+.nu-meal-scan-row {
+  padding: 0 12px;
+  background: rgba(125, 211, 252, 0.08);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 10px;
+  color: #7DD3FC;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.nu-meal-scan-row:active { background: rgba(125, 211, 252, 0.18); }
 
 /* Inputs / forms */
 .nu-input {
@@ -646,6 +664,282 @@ main {
 .spacer-12 { height: 12px; }
 .spacer-18 { height: 18px; }
 
+/* =========================================================
+   APPLE CENTERPIECE
+   ========================================================= */
+.nu-apple-card {
+  padding: 12px 14px 20px;
+}
+.nu-apple-stage {
+  position: relative;
+  width: 260px;
+  max-width: 100%;
+  height: 300px;
+  margin: 4px auto 12px;
+  perspective: 1400px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-apple-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nu-apple-stage.flipped .nu-apple-inner {
+  transform: rotateY(180deg);
+}
+.nu-apple-face {
+  position: absolute; inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.nu-apple-back { transform: rotateY(180deg); }
+
+.nu-apple-svg {
+  width: 100%; height: 100%;
+  filter: drop-shadow(0 18px 30px rgba(0,0,0,0.4));
+}
+.nu-apple-shell {
+  fill: rgba(255,255,255,0.025);
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 1.5;
+}
+#nuAppleFill {
+  transition: y 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nu-apple-stem {
+  fill: none;
+  stroke: #6b4530;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.nu-apple-leaf {
+  fill: #5da372;
+  opacity: 0.92;
+}
+.nu-apple-highlight {
+  fill: #ffffff;
+}
+
+.nu-apple-readout {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  padding-top: 18px;
+}
+.nu-apple-num {
+  font-family: var(--font-mono);
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+.nu-apple-cap {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.88);
+  margin-top: 6px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+}
+.nu-apple-hint {
+  position: absolute;
+  bottom: -4px;
+  left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  pointer-events: none;
+}
+
+/* Back side */
+.nu-apple-back-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.nu-apple-back-content {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+}
+.nu-apple-pie {
+  width: 180px; height: 180px;
+}
+.nu-apple-pie circle {
+  transition: stroke-dasharray 0.6s ease, transform 0.6s ease;
+}
+.nu-apple-pie-legend {
+  display: flex; flex-direction: column; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  width: 180px;
+}
+.nu-apple-pie-legend > div {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text-secondary);
+}
+.nu-apple-pie-legend strong {
+  margin-left: auto;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.nu-pie-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .nu-apple-stage { width: 230px; height: 270px; }
+  .nu-apple-num { font-size: 44px; }
+  .nu-apple-pie { width: 150px; height: 150px; }
+  .nu-apple-pie-legend { width: 150px; }
+}
+
+.nu-apple-macros { margin-top: 8px; }
+
+/* =========================================================
+   BARCODE SCANNER
+   ========================================================= */
+.nu-scan-modal {
+  max-width: 520px;
+  padding: 0;
+  display: flex; flex-direction: column;
+}
+.nu-scan-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.nu-scan-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.nu-scan-close {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  width: 32px; height: 32px; border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-scan-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  overflow: hidden;
+}
+.nu-scan-video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.nu-scan-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.nu-scan-frame {
+  width: 72%; height: 38%;
+  border: 2px solid rgba(255,255,255,0.85);
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+  position: relative;
+}
+.nu-scan-frame::before, .nu-scan-frame::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 3px solid var(--accent);
+}
+.nu-scan-frame::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; border-radius: 5px 0 0 0; }
+.nu-scan-frame::after  { bottom: -3px; right: -3px; border-left: 0; border-top: 0; border-radius: 0 0 5px 0; }
+.nu-scan-line {
+  position: absolute;
+  left: 6%; right: 6%;
+  top: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: nuScanSweep 2.2s ease-in-out infinite;
+}
+@keyframes nuScanSweep {
+  0%   { transform: translateY(-60px); opacity: 0.2; }
+  50%  { transform: translateY( 60px); opacity: 1; }
+  100% { transform: translateY(-60px); opacity: 0.2; }
+}
+.nu-scan-status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  padding: 14px 22px 6px;
+  text-align: center;
+}
+.nu-scan-status.err { color: var(--bad); }
+.nu-scan-status.ok  { color: var(--accent); }
+.nu-scan-body {
+  padding: 6px 22px 22px;
+}
+.nu-scan-manual-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.nu-scan-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 14px;
+  background: rgba(125, 211, 252, 0.10);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 10px;
+  color: #7DD3FC;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-scan-btn:active { transform: scale(0.97); }
+.nu-meal-scan {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1;
+}
+.nu-meal-scan:hover { color: var(--text-primary); }
+
+@media (max-width: 480px) {
+  .nu-scan-modal { max-width: 100%; }
+  .nu-scan-stage { aspect-ratio: 1/1; }
+}
+
 </style>
 </head>
 <body>
@@ -676,40 +970,87 @@ main {
 
   <!-- TODAY -->
   <section class="nu-panel active" data-panel="today">
-    <div class="nu-card">
-      <div class="nu-summary">
-        <div class="nu-ring-wrap">
-          <svg class="nu-ring-svg" viewBox="0 0 120 120">
-            <circle class="nu-ring-bg" cx="60" cy="60" r="52"></circle>
-            <circle class="nu-ring-fill" id="nuRingCal" cx="60" cy="60" r="52"
-                    stroke="var(--c-cal)" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
-          </svg>
-          <div class="nu-ring-center">
-            <div class="nu-ring-value" id="nuRingCalValue">0</div>
-            <div class="nu-ring-cap" id="nuRingCalCap">/ 0 KCAL</div>
+    <div class="nu-card nu-apple-card">
+      <div class="nu-apple-stage" id="nuAppleStage" role="button" tabindex="0" aria-label="Calorie progress · tap to flip to macros">
+        <div class="nu-apple-inner">
+          <div class="nu-apple-face nu-apple-front">
+            <svg class="nu-apple-svg" viewBox="0 0 220 280" aria-hidden="true">
+              <defs>
+                <clipPath id="nuAppleClip">
+                  <path d="M 110 56 C 100 48 88 44 75 48 C 55 56 40 80 38 120 C 36 170 50 222 80 240 C 95 248 125 248 140 240 C 170 222 184 170 182 120 C 180 80 165 56 145 48 C 132 44 120 48 110 56 Z" />
+                </clipPath>
+                <linearGradient id="nuAppleGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop id="nuAppleGradTop" offset="0%" stop-color="#7DE2B4"/>
+                  <stop id="nuAppleGradBot" offset="100%" stop-color="#3FB585"/>
+                </linearGradient>
+                <linearGradient id="nuAppleSheen" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.18"/>
+                  <stop offset="40%" stop-color="#ffffff" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <!-- Shell outline (empty apple) -->
+              <path class="nu-apple-shell"
+                d="M 110 56 C 100 48 88 44 75 48 C 55 56 40 80 38 120 C 36 170 50 222 80 240 C 95 248 125 248 140 240 C 170 222 184 170 182 120 C 180 80 165 56 145 48 C 132 44 120 48 110 56 Z" />
+              <!-- Fluid fill rises with progress, clipped to apple shape -->
+              <g clip-path="url(#nuAppleClip)">
+                <rect id="nuAppleFill" x="0" y="248" width="220" height="280" fill="url(#nuAppleGrad)"/>
+                <path id="nuAppleSheenPath" d="M 65 95 C 70 80 85 70 100 70" fill="none" stroke="url(#nuAppleSheen)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+              </g>
+              <!-- Apple highlight (always visible, subtle) -->
+              <ellipse class="nu-apple-highlight" cx="78" cy="110" rx="11" ry="18" opacity="0.10"/>
+              <!-- Stem -->
+              <path class="nu-apple-stem" d="M 110 56 C 115 40 122 30 130 22" />
+              <!-- Leaf -->
+              <path class="nu-apple-leaf"
+                d="M 130 22 C 144 14 162 22 158 38 C 152 44 138 40 130 28 Z" />
+            </svg>
+            <div class="nu-apple-readout">
+              <div class="nu-apple-num" id="nuAppleNum">0</div>
+              <div class="nu-apple-cap" id="nuAppleCap">/ 0 KCAL</div>
+            </div>
+          </div>
+          <div class="nu-apple-face nu-apple-back">
+            <div class="nu-apple-back-content">
+              <div class="nu-apple-back-title">Macro split</div>
+              <svg class="nu-apple-pie" viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"/>
+                <circle id="nuPieP" cx="60" cy="60" r="42" fill="none" stroke="var(--c-protein)" stroke-width="14"
+                        stroke-dasharray="0 264" stroke-linecap="butt" transform="rotate(-90 60 60)"/>
+                <circle id="nuPieC" cx="60" cy="60" r="42" fill="none" stroke="var(--c-carb)" stroke-width="14"
+                        stroke-dasharray="0 264" stroke-linecap="butt" transform="rotate(-90 60 60)"/>
+                <circle id="nuPieF" cx="60" cy="60" r="42" fill="none" stroke="var(--c-fat)" stroke-width="14"
+                        stroke-dasharray="0 264" stroke-linecap="butt" transform="rotate(-90 60 60)"/>
+              </svg>
+              <div class="nu-apple-pie-legend">
+                <div><span class="nu-pie-dot" style="background:var(--c-protein)"></span>Protein <strong id="nuPieLp">0%</strong></div>
+                <div><span class="nu-pie-dot" style="background:var(--c-carb)"></span>Carbs <strong id="nuPieLc">0%</strong></div>
+                <div><span class="nu-pie-dot" style="background:var(--c-fat)"></span>Fat <strong id="nuPieLf">0%</strong></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="nu-macros">
-          <div class="nu-macro">
-            <span class="nu-macro-label">Protein</span>
-            <div class="nu-bar"><div class="nu-bar-fill" id="nuBarProtein" style="background: var(--c-protein); width: 0%"></div></div>
-            <span class="nu-macro-val" id="nuValProtein"><strong>0</strong><small> / 0 g</small></span>
-          </div>
-          <div class="nu-macro">
-            <span class="nu-macro-label">Carbs</span>
-            <div class="nu-bar"><div class="nu-bar-fill" id="nuBarCarbs" style="background: var(--c-carb); width: 0%"></div></div>
-            <span class="nu-macro-val" id="nuValCarbs"><strong>0</strong><small> / 0 g</small></span>
-          </div>
-          <div class="nu-macro">
-            <span class="nu-macro-label">Fat</span>
-            <div class="nu-bar"><div class="nu-bar-fill" id="nuBarFat" style="background: var(--c-fat); width: 0%"></div></div>
-            <span class="nu-macro-val" id="nuValFat"><strong>0</strong><small> / 0 g</small></span>
-          </div>
-          <div class="nu-macro">
-            <span class="nu-macro-label">Fiber</span>
-            <div class="nu-bar"><div class="nu-bar-fill" id="nuBarFiber" style="background: var(--c-fiber); width: 0%"></div></div>
-            <span class="nu-macro-val" id="nuValFiber"><strong>0</strong><small> / 0 g</small></span>
-          </div>
+        <div class="nu-apple-hint">Tap to flip</div>
+      </div>
+      <div class="nu-macros nu-apple-macros">
+        <div class="nu-macro">
+          <span class="nu-macro-label">Protein</span>
+          <div class="nu-bar"><div class="nu-bar-fill" id="nuBarProtein" style="background: var(--c-protein); width: 0%"></div></div>
+          <span class="nu-macro-val" id="nuValProtein"><strong>0</strong><small> / 0 g</small></span>
+        </div>
+        <div class="nu-macro">
+          <span class="nu-macro-label">Carbs</span>
+          <div class="nu-bar"><div class="nu-bar-fill" id="nuBarCarbs" style="background: var(--c-carb); width: 0%"></div></div>
+          <span class="nu-macro-val" id="nuValCarbs"><strong>0</strong><small> / 0 g</small></span>
+        </div>
+        <div class="nu-macro">
+          <span class="nu-macro-label">Fat</span>
+          <div class="nu-bar"><div class="nu-bar-fill" id="nuBarFat" style="background: var(--c-fat); width: 0%"></div></div>
+          <span class="nu-macro-val" id="nuValFat"><strong>0</strong><small> / 0 g</small></span>
+        </div>
+        <div class="nu-macro">
+          <span class="nu-macro-label">Fiber</span>
+          <div class="nu-bar"><div class="nu-bar-fill" id="nuBarFiber" style="background: var(--c-fiber); width: 0%"></div></div>
+          <span class="nu-macro-val" id="nuValFiber"><strong>0</strong><small> / 0 g</small></span>
         </div>
       </div>
     </div>
@@ -739,8 +1080,9 @@ main {
       <input type="text" class="nu-input" id="nuFoodSearch" placeholder="Search built-in + custom foods…" autocomplete="off">
       <div class="nu-search-results" id="nuFoodResults"></div>
       <div class="nu-btn-row">
-        <button class="nu-btn nu-btn-ghost" id="nuFoodNewBtn">+ New custom food</button>
-        <button class="nu-btn nu-btn-ghost" id="nuFoodUpcBtn">UPC entry</button>
+        <button class="nu-btn" id="nuFoodScanBtn" style="background: rgba(125, 211, 252, 0.14); color: #7DD3FC; border: 1px solid rgba(125, 211, 252, 0.28);">📷 Scan barcode</button>
+        <button class="nu-btn nu-btn-ghost" id="nuFoodNewBtn">+ Custom</button>
+        <button class="nu-btn nu-btn-ghost" id="nuFoodUpcBtn">Type UPC</button>
       </div>
     </div>
   </section>
@@ -966,6 +1308,32 @@ main {
     <div class="nu-btn-row">
       <button class="nu-btn nu-btn-ghost" id="nuRecCancelBtn">Cancel</button>
       <button class="nu-btn" id="nuRecSaveBtn">Save recipe</button>
+    </div>
+  </div>
+</div>
+
+<!-- BARCODE SCAN MODAL -->
+<div class="nu-modal-bg" id="nuScanModal">
+  <div class="nu-modal nu-scan-modal">
+    <div class="nu-scan-head">
+      <h3>Scan barcode</h3>
+      <button class="nu-scan-close" id="nuScanCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="nu-scan-stage">
+      <video class="nu-scan-video" id="nuScanVideo" playsinline muted autoplay></video>
+      <div class="nu-scan-overlay">
+        <div class="nu-scan-frame">
+          <div class="nu-scan-line"></div>
+        </div>
+      </div>
+    </div>
+    <div class="nu-scan-status" id="nuScanStatus">Starting camera…</div>
+    <div class="nu-scan-body">
+      <div class="nu-label">Or type the UPC</div>
+      <div class="nu-scan-manual-row">
+        <input type="text" class="nu-input nu-input-mono" id="nuScanManual" placeholder="0000000000000" inputmode="numeric" autocomplete="off">
+        <button class="nu-btn" id="nuScanManualBtn">Look up</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1243,16 +1611,55 @@ main {
     const tg = getTargets();
     const t = totalsFor(log);
 
-    // Cal ring
-    const C = 2 * Math.PI * 52;
-    const ratio = tg.kcal > 0 ? Math.min(1, t.kcal / tg.kcal) : 0;
-    const fill = $('nuRingCal');
-    fill.setAttribute('stroke-dasharray', C.toFixed(2));
-    fill.setAttribute('stroke-dashoffset', (C * (1 - ratio)).toFixed(2));
-    fill.setAttribute('stroke', t.kcal > tg.kcal ? '#FB923C' : 'var(--c-cal)');
-    $('nuRingCalValue').textContent = Math.round(t.kcal);
-    $('nuRingCalCap').textContent = '/ ' + Math.round(tg.kcal) + ' KCAL';
+    // ----- Apple fluid fill -----
+    const ratio = tg.kcal > 0 ? t.kcal / tg.kcal : 0;
+    // Apple clipPath spans roughly y=44 (top) to y=248 (bottom). Map progress
+    // (0..1) to a fill bottom-up: y=248 means empty, y=44 means full.
+    const APPLE_TOP = 44, APPLE_BOTTOM = 248;
+    const clamped = Math.max(0, Math.min(1, ratio));
+    const fillY = APPLE_BOTTOM - (APPLE_BOTTOM - APPLE_TOP) * clamped;
+    const fillEl = $('nuAppleFill');
+    if (fillEl) fillEl.setAttribute('y', fillY.toFixed(1));
 
+    // Color shift: green under, gold near target, orange over.
+    let gTop, gBot;
+    if (ratio < 0.9)       { gTop = '#7DE2B4'; gBot = '#3FB585'; }
+    else if (ratio <= 1.05){ gTop = '#F5D572'; gBot = '#E0A93B'; }
+    else                   { gTop = '#FF9F66'; gBot = '#E26536'; }
+    const gradTopEl = $('nuAppleGradTop');
+    const gradBotEl = $('nuAppleGradBot');
+    if (gradTopEl) gradTopEl.setAttribute('stop-color', gTop);
+    if (gradBotEl) gradBotEl.setAttribute('stop-color', gBot);
+
+    const numEl = $('nuAppleNum');
+    const capEl = $('nuAppleCap');
+    if (numEl) numEl.textContent = Math.round(t.kcal);
+    if (capEl) capEl.textContent = '/ ' + Math.round(tg.kcal) + ' KCAL';
+
+    // ----- Back side macro pie -----
+    const pKcal = t.p * 4, cKcal = t.c * 4, fKcal = t.f * 9;
+    const macroSum = pKcal + cKcal + fKcal;
+    const pPct = macroSum > 0 ? pKcal / macroSum : 0;
+    const cPct = macroSum > 0 ? cKcal / macroSum : 0;
+    const fPct = macroSum > 0 ? fKcal / macroSum : 0;
+    const PIE_C = 2 * Math.PI * 42;
+    function setSeg(id, fromPct, lenPct) {
+      const el = $(id);
+      if (!el) return;
+      const dash = (lenPct * PIE_C).toFixed(2);
+      const gap = (PIE_C - lenPct * PIE_C).toFixed(2);
+      el.setAttribute('stroke-dasharray', dash + ' ' + gap);
+      el.setAttribute('transform', 'rotate(' + (-90 + fromPct * 360).toFixed(2) + ' 60 60)');
+    }
+    setSeg('nuPieP', 0,             pPct);
+    setSeg('nuPieC', pPct,          cPct);
+    setSeg('nuPieF', pPct + cPct,   fPct);
+    const pieLp = $('nuPieLp'), pieLc = $('nuPieLc'), pieLf = $('nuPieLf');
+    if (pieLp) pieLp.textContent = Math.round(pPct * 100) + '%';
+    if (pieLc) pieLc.textContent = Math.round(cPct * 100) + '%';
+    if (pieLf) pieLf.textContent = Math.round(fPct * 100) + '%';
+
+    // ----- Macro bars (below apple) -----
     function setBar(barId, valId, value, target, color) {
       const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
       $(barId).style.width = pct + '%';
@@ -1292,7 +1699,10 @@ main {
             <div class="nu-meal-cal">${Math.round(total)} kcal</div>
           </div>
           ${list}
-          <button class="nu-meal-add" data-add-to="${m.id}">+ Add food</button>
+          <div class="nu-meal-add-row">
+            <button class="nu-meal-add" data-add-to="${m.id}">+ Add food</button>
+            <button class="nu-meal-scan-row" data-scan-to="${m.id}" aria-label="Scan barcode for ${m.name}">📷</button>
+          </div>
         </div>`;
     }).join('');
     wrap.innerHTML = html;
@@ -1306,6 +1716,12 @@ main {
         switchTab('foods');
         $('nuFoodSearch').focus();
         addPendingMeal = b.getAttribute('data-add-to');
+      });
+    });
+    wrap.querySelectorAll('[data-scan-to]').forEach(b => {
+      b.addEventListener('click', () => {
+        addPendingMeal = b.getAttribute('data-scan-to');
+        openScanModal();
       });
     });
   }
@@ -2019,6 +2435,31 @@ main {
     $('nuFoodSearch').addEventListener('input', renderFoodResults);
     $('nuFoodNewBtn').addEventListener('click', () => openNewFoodModal());
     $('nuFoodUpcBtn').addEventListener('click', () => { $('nuUpcInput').value = ''; $('nuUpcModal').classList.add('show'); });
+    $('nuFoodScanBtn').addEventListener('click', () => openScanModal());
+
+    // Scan modal
+    $('nuScanCloseBtn').addEventListener('click', closeScanModal);
+    $('nuScanManualBtn').addEventListener('click', async () => {
+      const v = $('nuScanManual').value.trim();
+      if (!v) { toast('Enter a UPC'); return; }
+      setScanStatus('Looking up ' + v + '…', '');
+      await onBarcodeDetected(v);
+    });
+    $('nuScanManual').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $('nuScanManualBtn').click();
+    });
+
+    // Apple flip
+    const stage = $('nuAppleStage');
+    if (stage) {
+      stage.addEventListener('click', () => stage.classList.toggle('flipped'));
+      stage.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          stage.classList.toggle('flipped');
+        }
+      });
+    }
 
     // Add modal
     $('nuAddCancelBtn').addEventListener('click', closeAddModal);
@@ -2088,13 +2529,205 @@ main {
     });
     $('nuResetDayBtn').addEventListener('click', resetCurrentDay);
 
-    // Close modals on backdrop click
+    // Close modals on backdrop click. Scan modal also tears down its
+    // camera stream.
     document.querySelectorAll('.nu-modal-bg').forEach(m => {
-      m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('show'); });
+      m.addEventListener('click', (e) => {
+        if (e.target !== m) return;
+        if (m.id === 'nuScanModal') closeScanModal();
+        else m.classList.remove('show');
+      });
     });
 
     // Cross-tab refresh
     window.addEventListener('storage', () => renderAll());
+  }
+
+  // =============================================================
+  // BARCODE SCANNER
+  //  Live camera scan via the native BarcodeDetector API.
+  //  Food lookup via Open Food Facts (open / CC-licensed db
+  //  with millions of products). Results cached and saved as a
+  //  custom food so future scans are instant + work offline.
+  // =============================================================
+  const UPC_CACHE_KEY = 'nutrition:upc_cache';
+  let scanStream = null;
+  let scanInterval = null;
+  let scanDetector = null;
+  let scanning = false;
+  let scanLastCode = null;
+
+  async function openScanModal() {
+    const modal = $('nuScanModal');
+    modal.classList.add('show');
+    $('nuScanManual').value = '';
+    scanLastCode = null;
+    setScanStatus('Starting camera…', '');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setScanStatus('Camera not available on this device. Enter UPC manually below.', 'err');
+      return;
+    }
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      const video = $('nuScanVideo');
+      video.srcObject = scanStream;
+      await video.play();
+    } catch (e) {
+      setScanStatus('Camera permission denied. You can still enter a UPC manually.', 'err');
+      return;
+    }
+
+    if ('BarcodeDetector' in window) {
+      try {
+        scanDetector = new window.BarcodeDetector({
+          formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar'],
+        });
+      } catch (e) {
+        try { scanDetector = new window.BarcodeDetector(); } catch (e2) { scanDetector = null; }
+      }
+    } else {
+      scanDetector = null;
+    }
+
+    if (scanDetector) {
+      setScanStatus('Point camera at a barcode', '');
+      scanning = true;
+      if (scanInterval) clearInterval(scanInterval);
+      scanInterval = setInterval(tryDetect, 240);
+    } else {
+      setScanStatus('Live scanning not supported on this browser — type the UPC below.', 'err');
+    }
+  }
+
+  function setScanStatus(msg, cls) {
+    const el = $('nuScanStatus');
+    el.textContent = msg;
+    el.classList.remove('err', 'ok');
+    if (cls) el.classList.add(cls);
+  }
+
+  async function tryDetect() {
+    if (!scanning || !scanDetector) return;
+    const video = $('nuScanVideo');
+    if (!video || video.readyState < 2) return;
+    try {
+      const codes = await scanDetector.detect(video);
+      if (codes && codes.length > 0) {
+        const code = codes[0].rawValue;
+        if (!code || code === scanLastCode) return;
+        scanLastCode = code;
+        scanning = false;
+        if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
+        await onBarcodeDetected(code);
+      }
+    } catch (e) {}
+  }
+
+  function closeScanModal() {
+    $('nuScanModal').classList.remove('show');
+    scanning = false;
+    if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+    if (scanStream) {
+      try { scanStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+      scanStream = null;
+    }
+    const video = $('nuScanVideo');
+    if (video) { try { video.pause(); video.srcObject = null; } catch (e) {} }
+  }
+
+  async function onBarcodeDetected(code) {
+    setScanStatus('Found ' + code + ' — looking up…', 'ok');
+    const food = await lookupBarcode(code);
+    if (food) {
+      closeScanModal();
+      const meal = addPendingMeal;
+      openAddModal(food, 'custom');
+      // restore pending meal so the default add lands there if user taps a meal
+      if (meal) addPendingMeal = meal;
+    } else {
+      setScanStatus('No match for ' + code + '. Try again or add it manually.', 'err');
+      // Resume scanning after a short pause so user can re-aim.
+      setTimeout(() => {
+        scanLastCode = null;
+        scanning = true;
+        setScanStatus('Point camera at a barcode', '');
+      }, 1400);
+    }
+  }
+
+  async function lookupBarcode(code) {
+    if (!code) return null;
+    const trimmed = String(code).trim();
+
+    // 1. Memory cache in localStorage.
+    const cache = storeGet(UPC_CACHE_KEY, {}) || {};
+    if (cache[trimmed]) return cache[trimmed];
+
+    // 2. User's existing custom foods (manual entries or prior scans).
+    const customs = getCustomFoods();
+    const existing = customs.find(f => f.upc === trimmed);
+    if (existing) {
+      cache[trimmed] = existing;
+      storeSet(UPC_CACHE_KEY, cache);
+      return existing;
+    }
+
+    // 3. Open Food Facts — public worldwide product database.
+    try {
+      const resp = await fetch(
+        'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(trimmed) + '.json'
+      );
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      if (!data || data.status !== 1 || !data.product) return null;
+      const food = buildFoodFromOFF(data.product, trimmed);
+      // Save to user's custom foods so future scans are instant + offline,
+      // and the item shows up in search results.
+      const all = getCustomFoods();
+      all.push(food);
+      setCustomFoods(all);
+      cache[trimmed] = food;
+      storeSet(UPC_CACHE_KEY, cache);
+      return food;
+    } catch (e) {}
+
+    return null;
+  }
+
+  function buildFoodFromOFF(p, code) {
+    const n = p.nutriments || {};
+    // Energy: prefer kcal_100g, fall back to kcal_serving, then kJ→kcal.
+    let kcal = +n['energy-kcal_100g'];
+    if (!kcal && n['energy-kcal_serving']) kcal = +n['energy-kcal_serving'];
+    if (!kcal && n.energy_100g)            kcal = +n.energy_100g / 4.184;
+    kcal = +kcal || 0;
+
+    const baseName = (p.product_name || p.product_name_en || p.generic_name || ('Product ' + code)).toString().trim();
+    const brand = (p.brands || '').toString().split(',')[0].trim();
+    const name = brand && baseName.toLowerCase().indexOf(brand.toLowerCase()) === -1
+      ? (baseName + ' · ' + brand)
+      : baseName;
+
+    return {
+      id: newId(),
+      name,
+      brand,
+      serving: (p.serving_size || '100 g').toString().trim(),
+      upc: code,
+      source: 'off',
+      kcal:   round1(kcal),
+      p:      round1(+n.proteins_100g      || 0),
+      c:      round1(+n.carbohydrates_100g || 0),
+      f:      round1(+n.fat_100g           || 0),
+      fib:    round1(+n.fiber_100g         || 0),
+      sugar:  round1(+n.sugars_100g        || 0),
+      sodium: round1((+n.sodium_100g       || 0) * 1000),
+      ts: Date.now(),
+    };
   }
 
   // =============================================================
@@ -2107,6 +2740,7 @@ main {
       syncedKeys: [
         LS_KEYS.targets, LS_KEYS.foods, LS_KEYS.recipes,
         LS_KEYS.tpls, LS_KEYS.settings, LS_KEYS.weight,
+        UPC_CACHE_KEY,
       ],
       syncedPrefixes: [LOG_PREFIX],
       onApplied: renderAll,
