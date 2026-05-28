@@ -1267,6 +1267,1042 @@ img, video, canvas, svg { max-width: 100%; }
 </head>
 <body>
 
+<!-- =============================================================
+     FITNESS STATS HUB
+     New landing-screen layer that reads existing po_coach_v1 data.
+     Computes per-lift tiers + a composite Power Score, renders a
+     muscle-coded body diagram, and exposes a body-part workout
+     picker that scrolls down to the existing exercise log.
+     ============================================================= -->
+<style>
+.fh-hub {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  color: #ffffff;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+  padding-top: max(18px, env(safe-area-inset-top));
+}
+
+.fh-eyebrow {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  margin: 0 2px 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.fh-eyebrow::before { content: '◇'; font-size: 10px; opacity: 0.5; }
+
+.fh-card {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 14px 40px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+  margin-bottom: 16px;
+}
+
+/* ---------- Power Score gauge ---------- */
+.fh-score-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+@media (max-width: 480px) {
+  .fh-score-row { grid-template-columns: 140px 1fr; gap: 14px; }
+}
+.fh-gauge {
+  position: relative;
+  width: 180px; height: 180px;
+}
+@media (max-width: 480px) {
+  .fh-gauge { width: 140px; height: 140px; }
+}
+.fh-gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.fh-gauge-bg, .fh-gauge-fill {
+  fill: none; stroke-width: 10;
+  stroke-linecap: round;
+}
+.fh-gauge-bg { stroke: rgba(255, 255, 255, 0.05); }
+.fh-gauge-fill { transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease; }
+.fh-gauge-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+}
+.fh-gauge-num {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 38px; font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 480px) {
+  .fh-gauge-num { font-size: 30px; }
+}
+.fh-gauge-cap {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 6px;
+}
+.fh-score-meta {
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+.fh-tier-pill {
+  display: inline-flex; align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  align-self: flex-start;
+}
+.fh-score-title {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 2px 0;
+}
+.fh-score-sub {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Body diagram ---------- */
+.fh-body-card {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+@media (max-width: 600px) {
+  .fh-body-card { grid-template-columns: 1fr; }
+}
+.fh-body-svg-wrap {
+  position: relative;
+  background: linear-gradient(180deg, #0d0d10 0%, #0a0a0c 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 12px 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.fh-body-toggle {
+  position: absolute;
+  top: 10px; right: 10px;
+  display: flex; gap: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 3px;
+}
+.fh-body-toggle button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fh-body-toggle button.on {
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+}
+.fh-body-svg {
+  width: 196px;
+  max-width: 100%;
+  height: auto;
+}
+.fh-body-region {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: fill 0.25s ease, transform 0.15s ease;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.fh-body-region:hover { transform: scale(1.04); }
+.fh-body-skel {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: rgba(255, 255, 255, 0.10);
+  stroke-width: 1.2;
+}
+
+.fh-tier-legend {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 0;
+}
+.fh-tier-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 9px;
+  align-items: center;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 9px;
+  font-size: 12px;
+}
+.fh-tier-dot {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+}
+.fh-tier-name {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: uppercase;
+}
+.fh-tier-count {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Per-lift list ---------- */
+.fh-lift-list {
+  display: flex; flex-direction: column; gap: 7px;
+}
+.fh-lift {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 13px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 11px;
+  transition: transform 0.12s ease, background 0.18s ease;
+}
+.fh-lift:active { transform: scale(0.99); }
+.fh-lift-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+.fh-lift-name small {
+  display: block;
+  margin-top: 2px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.04em;
+}
+.fh-lift-1rm {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.fh-lift-1rm small {
+  display: block;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+.fh-lift-tier {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.fh-lift-bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.fh-lift-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease, background 0.3s ease;
+}
+
+/* ---------- Body-part workout picker ---------- */
+.fh-picker-tabs {
+  display: flex; gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -4px 12px;
+  padding: 0 4px 4px;
+}
+.fh-picker-tabs::-webkit-scrollbar { display: none; }
+.fh-picker-tab {
+  flex-shrink: 0;
+  padding: 7px 13px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.65);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+.fh-picker-tab:active { transform: scale(0.96); }
+.fh-picker-tab.on {
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.fh-picker-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.fh-picker-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.fh-picker-card:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.10); }
+.fh-picker-card:active { transform: scale(0.99); }
+.fh-picker-card-info {
+  min-width: 0;
+}
+.fh-picker-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+  margin-bottom: 4px;
+}
+.fh-picker-chips {
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.fh-chip {
+  display: inline-flex;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+.fh-picker-stat {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.fh-picker-stat small {
+  display: block;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.fh-empty {
+  text-align: center;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 18px 12px;
+  letter-spacing: 0.06em;
+}
+
+/* Region drawer */
+.fh-drawer-bg {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: flex-end; justify-content: center;
+}
+.fh-drawer-bg.on { display: flex; }
+.fh-drawer {
+  width: 100%;
+  max-width: 520px;
+  background: #0c0c0e;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 18px 18px max(22px, env(safe-area-inset-bottom));
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: fhDrawerIn 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes fhDrawerIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.fh-drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.fh-drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+.fh-drawer-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: #ffffff;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+}
+</style>
+
+<section class="fh-hub" id="fhHub">
+  <div class="fh-eyebrow">Strength dashboard</div>
+
+  <div class="fh-card">
+    <div class="fh-score-row">
+      <div class="fh-gauge">
+        <svg viewBox="0 0 120 120">
+          <circle class="fh-gauge-bg" cx="60" cy="60" r="52"></circle>
+          <circle class="fh-gauge-fill" id="fhGaugeFill" cx="60" cy="60" r="52"
+                  stroke="#7DD3FC" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+        </svg>
+        <div class="fh-gauge-center">
+          <div class="fh-gauge-num" id="fhScoreNum">0</div>
+          <div class="fh-gauge-cap">Power Score</div>
+        </div>
+      </div>
+      <div class="fh-score-meta">
+        <span class="fh-tier-pill" id="fhScoreTier">Untrained</span>
+        <div class="fh-score-title" id="fhScoreTitle">Log a set to start tracking.</div>
+        <div class="fh-score-sub" id="fhScoreSub">— · — lifts indexed</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fh-eyebrow">Muscle map</div>
+
+  <div class="fh-card fh-body-card">
+    <div class="fh-body-svg-wrap">
+      <div class="fh-body-toggle">
+        <button data-fh-view="front" class="on">Front</button>
+        <button data-fh-view="back">Back</button>
+      </div>
+      <svg class="fh-body-svg" id="fhBodySvg" viewBox="0 0 200 440" aria-label="Body diagram">
+        <!-- All regions injected at runtime so we can swap front/back cleanly -->
+      </svg>
+    </div>
+    <div class="fh-tier-legend" id="fhTierLegend"></div>
+  </div>
+
+  <div class="fh-eyebrow">Per-lift rankings</div>
+  <div class="fh-card" style="padding: 12px 12px;">
+    <div class="fh-lift-list" id="fhLiftList">
+      <div class="fh-empty">Log a set in the picker below — your rankings appear here automatically.</div>
+    </div>
+  </div>
+
+  <div class="fh-eyebrow">Start workout — pick a body part</div>
+  <div class="fh-card" style="padding: 14px;">
+    <div class="fh-picker-tabs" id="fhPickerTabs"></div>
+    <div class="fh-picker-list" id="fhPickerList"></div>
+  </div>
+</section>
+
+<!-- Region detail drawer -->
+<div class="fh-drawer-bg" id="fhDrawerBg">
+  <div class="fh-drawer">
+    <div class="fh-drawer-head">
+      <div class="fh-drawer-title" id="fhDrawerTitle">Muscle</div>
+      <button class="fh-drawer-close" id="fhDrawerClose" aria-label="Close">×</button>
+    </div>
+    <div id="fhDrawerBody"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+(function () {
+  // ==========================================================
+  // FITNESS STATS HUB — additive layer.
+  // Reads existing po_coach_v1 set history. Computes Epley 1RMs,
+  // maps each lift to a muscle group, scales against bodyweight
+  // (from po_coach_weights or po_water_v1 profile), and assigns
+  // a strength tier. Renders a body diagram + Power Score gauge
+  // + workout picker. Tapping a workout scrolls to the existing
+  // exercise card / log UI below.
+  // ==========================================================
+
+  // ---- Tier system ----
+  // Bands are intentionally my own; thresholds are typical
+  // strength-training ratios well-known in the lifting community.
+  const TIERS = [
+    { key: 'untrained',    name: 'Untrained',    color: '#5B5B62', min: 0   },
+    { key: 'beginner',     name: 'Beginner',     color: '#E26536', min: 0.20 },
+    { key: 'novice',       name: 'Novice',       color: '#E0A93B', min: 0.40 },
+    { key: 'intermediate', name: 'Intermediate', color: '#6EE7B7', min: 0.60 },
+    { key: 'advanced',     name: 'Advanced',     color: '#3FB585', min: 0.78 },
+    { key: 'elite',        name: 'Elite',        color: '#7DD3FC', min: 0.92 },
+    { key: 'god',          name: 'God-Tier',     color: '#C084FC', min: 1.05 },
+  ];
+
+  // Per-lift bodyweight-relative thresholds for "Intermediate".
+  // Other tiers scale around this (see ratioToTier). Numbers chosen
+  // from common lifting standards for an adult male; female users
+  // get a scaling factor (~0.7) applied to the threshold.
+  const LIFT_TABLE = [
+    // keyword regex, muscle (front body region), display name, intermediate-tier ratio
+    { re: /bench\s*press|bench/i,            muscle: 'chest',     name: 'Bench Press',     ratio: 1.20, equip: 'barbell' },
+    { re: /incline\s*(bench|press)/i,        muscle: 'chest',     name: 'Incline Press',   ratio: 1.00, equip: 'barbell' },
+    { re: /(over[-\s]?head|shoulder|military)\s*press/i, muscle: 'shoulders', name: 'Overhead Press', ratio: 0.70, equip: 'barbell' },
+    { re: /(back\s*)?squat/i,                muscle: 'quads',     name: 'Squat',           ratio: 1.50, equip: 'barbell' },
+    { re: /front\s*squat/i,                  muscle: 'quads',     name: 'Front Squat',     ratio: 1.10, equip: 'barbell' },
+    { re: /(conventional|sumo)?\s*deadlift/i, muscle: 'back',     name: 'Deadlift',        ratio: 1.80, equip: 'barbell' },
+    { re: /romanian\s*deadlift|rdl/i,        muscle: 'hamstrings', name: 'Romanian DL',    ratio: 1.30, equip: 'barbell' },
+    { re: /(barbell|bent[-\s]?over)\s*row/i, muscle: 'back',      name: 'Barbell Row',     ratio: 0.95, equip: 'barbell' },
+    { re: /pull[-\s]?up|chin[-\s]?up/i,      muscle: 'back',      name: 'Pull-up',         ratio: 1.00, equip: 'bodyweight' },
+    { re: /lat\s*pull[-\s]?down/i,           muscle: 'back',      name: 'Lat Pulldown',    ratio: 0.75, equip: 'cable' },
+    { re: /bicep\s*curl|barbell\s*curl|dumbbell\s*curl/i, muscle: 'biceps', name: 'Bicep Curl', ratio: 0.40, equip: 'dumbbell' },
+    { re: /tricep|pushdown|skull\s*crush/i,  muscle: 'triceps',   name: 'Tricep Pushdown', ratio: 0.45, equip: 'cable' },
+    { re: /dip/i,                            muscle: 'triceps',   name: 'Dip',             ratio: 1.20, equip: 'bodyweight' },
+    { re: /leg\s*press/i,                    muscle: 'quads',     name: 'Leg Press',       ratio: 2.20, equip: 'machine' },
+    { re: /leg\s*extension/i,                muscle: 'quads',     name: 'Leg Extension',   ratio: 0.70, equip: 'machine' },
+    { re: /leg\s*curl|ham\s*curl/i,          muscle: 'hamstrings', name: 'Leg Curl',       ratio: 0.55, equip: 'machine' },
+    { re: /hip\s*thrust|glute\s*bridge/i,    muscle: 'glutes',    name: 'Hip Thrust',      ratio: 1.80, equip: 'barbell' },
+    { re: /calf\s*raise/i,                   muscle: 'calves',    name: 'Calf Raise',      ratio: 1.00, equip: 'machine' },
+    { re: /face\s*pull/i,                    muscle: 'shoulders', name: 'Face Pull',       ratio: 0.45, equip: 'cable' },
+    { re: /lateral\s*raise/i,                muscle: 'shoulders', name: 'Lateral Raise',   ratio: 0.20, equip: 'dumbbell' },
+    { re: /(crunch|sit[-\s]?up|plank|ab)/i,  muscle: 'abs',       name: 'Core',            ratio: 0.30, equip: 'bodyweight' },
+  ];
+
+  // Muscle regions used both on body diagram and in workout picker.
+  const MUSCLES = [
+    { key: 'chest',      label: 'Chest' },
+    { key: 'back',       label: 'Back' },
+    { key: 'shoulders',  label: 'Shoulders' },
+    { key: 'biceps',     label: 'Biceps' },
+    { key: 'triceps',    label: 'Triceps' },
+    { key: 'forearms',   label: 'Forearms' },
+    { key: 'abs',        label: 'Core' },
+    { key: 'quads',      label: 'Quads' },
+    { key: 'hamstrings', label: 'Hamstrings' },
+    { key: 'glutes',     label: 'Glutes' },
+    { key: 'calves',     label: 'Calves' },
+  ];
+
+  // ---- Body diagram paths (front + back). Stylized rounded shapes,
+  // no anatomical detail — each region is its own <ellipse>/<rect>.
+  const BODY_FRONT = `
+    <circle class="fh-body-skel" cx="100" cy="36" r="22"/>
+    <rect class="fh-body-skel" x="92" y="56" width="16" height="14" rx="4"/>
+    <ellipse class="fh-body-region" data-region="shoulders" cx="62"  cy="92" rx="22" ry="14"/>
+    <ellipse class="fh-body-region" data-region="shoulders" cx="138" cy="92" rx="22" ry="14"/>
+    <rect    class="fh-body-region" data-region="chest"     x="62" y="84" width="76" height="42" rx="14"/>
+    <ellipse class="fh-body-region" data-region="biceps"    cx="40"  cy="132" rx="14" ry="32"/>
+    <ellipse class="fh-body-region" data-region="biceps"    cx="160" cy="132" rx="14" ry="32"/>
+    <ellipse class="fh-body-region" data-region="forearms"  cx="32"  cy="196" rx="12" ry="28"/>
+    <ellipse class="fh-body-region" data-region="forearms"  cx="168" cy="196" rx="12" ry="28"/>
+    <rect    class="fh-body-region" data-region="abs"       x="80" y="130" width="40" height="74" rx="10"/>
+    <ellipse class="fh-body-skel"    cx="100" cy="222" rx="40" ry="14"/>
+    <rect    class="fh-body-region" data-region="quads"     x="72" y="234" width="22" height="80" rx="10"/>
+    <rect    class="fh-body-region" data-region="quads"     x="106" y="234" width="22" height="80" rx="10"/>
+    <rect    class="fh-body-region" data-region="calves"    x="74" y="320" width="20" height="68" rx="8"/>
+    <rect    class="fh-body-region" data-region="calves"    x="106" y="320" width="20" height="68" rx="8"/>
+    <ellipse class="fh-body-skel" cx="84" cy="400" rx="14" ry="6"/>
+    <ellipse class="fh-body-skel" cx="116" cy="400" rx="14" ry="6"/>
+  `;
+  const BODY_BACK = `
+    <circle class="fh-body-skel" cx="100" cy="36" r="22"/>
+    <rect class="fh-body-skel" x="92" y="56" width="16" height="14" rx="4"/>
+    <ellipse class="fh-body-region" data-region="shoulders" cx="62"  cy="92" rx="22" ry="14"/>
+    <ellipse class="fh-body-region" data-region="shoulders" cx="138" cy="92" rx="22" ry="14"/>
+    <rect    class="fh-body-region" data-region="back"      x="62" y="84" width="76" height="80" rx="14"/>
+    <ellipse class="fh-body-region" data-region="triceps"   cx="40"  cy="132" rx="14" ry="32"/>
+    <ellipse class="fh-body-region" data-region="triceps"   cx="160" cy="132" rx="14" ry="32"/>
+    <ellipse class="fh-body-region" data-region="forearms"  cx="32"  cy="196" rx="12" ry="28"/>
+    <ellipse class="fh-body-region" data-region="forearms"  cx="168" cy="196" rx="12" ry="28"/>
+    <rect    class="fh-body-region" data-region="glutes"    x="68" y="210" width="64" height="38" rx="14"/>
+    <rect    class="fh-body-region" data-region="hamstrings" x="72" y="252" width="22" height="64" rx="10"/>
+    <rect    class="fh-body-region" data-region="hamstrings" x="106" y="252" width="22" height="64" rx="10"/>
+    <rect    class="fh-body-region" data-region="calves"    x="74" y="320" width="20" height="68" rx="8"/>
+    <rect    class="fh-body-region" data-region="calves"    x="106" y="320" width="20" height="68" rx="8"/>
+    <ellipse class="fh-body-skel" cx="84" cy="400" rx="14" ry="6"/>
+    <ellipse class="fh-body-skel" cx="116" cy="400" rx="14" ry="6"/>
+  `;
+
+  // ---- Helpers ----
+  function $(id) { return document.getElementById(id); }
+  function storeGet(k, fb) {
+    try { const r = localStorage.getItem(k); if (r == null) return fb; return JSON.parse(r); }
+    catch (e) { return fb; }
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function round1(n) { return Math.round((+n || 0) * 10) / 10; }
+  function epley(weight, reps) {
+    if (!weight || !reps || reps < 1) return 0;
+    if (reps === 1) return +weight;
+    return Math.round(+weight * (1 + reps / 30) * 10) / 10;
+  }
+
+  // ---- Read existing po_coach_v1 data ----
+  function readCoachState() {
+    return storeGet('po_coach_v1', null);
+  }
+  function getBodyweightKg() {
+    // First try the gym page's bodyweight log.
+    const weights = storeGet('po_coach_weights', []);
+    if (Array.isArray(weights) && weights.length) {
+      const sorted = weights.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const v = sorted[0];
+      if (v && v.kg) return +v.kg;
+      if (v && v.lb) return v.lb / 2.20462;
+    }
+    // Fall back to water page profile (always in kg internally on v2).
+    const water = storeGet('po_water_v1', null);
+    if (water && water.profile && water.profile.weightKg) return +water.profile.weightKg;
+    return 75; // sensible default
+  }
+  function getSexFactor() {
+    const water = storeGet('po_water_v1', null);
+    if (water && water.profile && water.profile.sex === 'f') return 0.72;
+    return 1.0;
+  }
+
+  // Walk the coach state and pull out every set entry we can identify.
+  function gatherAllSets() {
+    const out = [];
+    const state = readCoachState();
+    if (!state || typeof state !== 'object') return out;
+    function walk(node, path) {
+      if (node == null) return;
+      if (Array.isArray(node)) { node.forEach((v, i) => walk(v, path.concat(i))); return; }
+      if (typeof node !== 'object') return;
+      const w = node.weight != null ? +node.weight : (node.kg != null ? +node.kg : (node.lb != null ? +node.lb : NaN));
+      const r = node.reps != null ? +node.reps : NaN;
+      if (!isNaN(w) && !isNaN(r) && w >= 0 && r > 0) {
+        const date = node.date || node.day || node.ts || node.timestamp || null;
+        let name = node.exercise || node.name || pickNameFromPath(path);
+        if (typeof name !== 'string') name = String(name || '(unknown)');
+        out.push({ name, weight: w, reps: r, date });
+      }
+      Object.keys(node).forEach(k => walk(node[k], path.concat(k)));
+    }
+    walk(state, []);
+    return out;
+  }
+  function pickNameFromPath(path) {
+    for (let i = path.length - 1; i >= 0; i--) {
+      const k = path[i];
+      if (typeof k === 'string' && /[a-z]/i.test(k) && !/^(history|logs|sessions|data|state|sets)$/i.test(k)) {
+        return k.replace(/_/g, ' ');
+      }
+    }
+    return '(unknown)';
+  }
+
+  // For each lift in our table, find the user's best Epley 1RM.
+  function computeBestPerLift(sets) {
+    const out = {};
+    sets.forEach(s => {
+      const entry = LIFT_TABLE.find(L => L.re.test(s.name));
+      if (!entry) return;
+      const e = epley(s.weight, s.reps);
+      const cur = out[entry.name];
+      if (!cur || e > cur.e1rm) {
+        out[entry.name] = {
+          spec: entry,
+          weight: s.weight, reps: s.reps,
+          e1rm: e, date: s.date,
+        };
+      }
+    });
+    return out;
+  }
+
+  // Map a per-lift best -> tier object based on bw-relative ratio.
+  function tierForRatio(actualRatio, intermediateRatio) {
+    // Normalize: 1.0 at intermediate threshold.
+    const norm = intermediateRatio > 0 ? actualRatio / intermediateRatio : 0;
+    return TIERS.slice().reverse().find(t => norm >= t.min) || TIERS[0];
+  }
+  function tierIndexNorm(actualRatio, intermediateRatio) {
+    // Continuous 0..1 score where 1.0 = god tier threshold.
+    const norm = intermediateRatio > 0 ? actualRatio / intermediateRatio : 0;
+    const max = TIERS[TIERS.length - 1].min;
+    return Math.max(0, Math.min(1.5, norm / max));
+  }
+
+  // Aggregate Power Score (0–1000).
+  function computePowerScore(perLift, bwKg, sexFactor) {
+    // Use up to 6 main compounds, plus bonus contribution from any others.
+    const PRIMARY = ['Bench Press', 'Squat', 'Deadlift', 'Overhead Press', 'Barbell Row', 'Pull-up'];
+    const ratios = [];
+    PRIMARY.forEach(name => {
+      const best = perLift[name];
+      if (!best) return;
+      const ratio = best.e1rm / Math.max(1, bwKg);
+      const tgt = best.spec.ratio * sexFactor;
+      ratios.push(ratio / tgt);
+    });
+    // Other lifts contribute at half-weight.
+    Object.keys(perLift).forEach(name => {
+      if (PRIMARY.indexOf(name) !== -1) return;
+      const best = perLift[name];
+      const ratio = best.e1rm / Math.max(1, bwKg);
+      const tgt = best.spec.ratio * sexFactor;
+      ratios.push((ratio / tgt) * 0.5);
+    });
+    if (ratios.length === 0) return { score: 0, tier: TIERS[0] };
+    const avg = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+    // Map normalized average to 0–1000. Intermediate ≈ 500.
+    const score = Math.max(0, Math.min(1000, Math.round(avg * 500)));
+    // Find tier by mapping score back to TIERS thresholds × 1000.
+    const t = TIERS.slice().reverse().find(t => score >= t.min * 1000 / 1.05) || TIERS[0];
+    return { score, tier: t, count: ratios.length };
+  }
+
+  // ---- Render: body diagram ----
+  let currentView = 'front';
+  function renderBody(perLift) {
+    const svg = $('fhBodySvg');
+    svg.innerHTML = (currentView === 'front' ? BODY_FRONT : BODY_BACK).trim();
+    // Color each region by the tier of the dominant lift for that muscle.
+    const muscleTier = {};
+    Object.keys(perLift).forEach(name => {
+      const best = perLift[name];
+      const muscle = best.spec.muscle;
+      const bwKg = getBodyweightKg();
+      const sexFactor = getSexFactor();
+      const ratio = best.e1rm / Math.max(1, bwKg);
+      const tier = tierForRatio(ratio, best.spec.ratio * sexFactor);
+      const tierRank = TIERS.findIndex(t => t.key === tier.key);
+      if (!muscleTier[muscle] || tierRank > muscleTier[muscle].rank) {
+        muscleTier[muscle] = { tier, rank: tierRank };
+      }
+    });
+    svg.querySelectorAll('.fh-body-region').forEach(node => {
+      const m = node.getAttribute('data-region');
+      const mt = muscleTier[m];
+      node.setAttribute('fill', mt ? mt.tier.color : 'rgba(255,255,255,0.06)');
+      node.setAttribute('stroke', mt ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.08)');
+      node.setAttribute('stroke-width', '0.8');
+      node.addEventListener('click', () => openRegionDrawer(m, perLift));
+    });
+  }
+
+  // ---- Render: tier legend (counts of muscles per tier) ----
+  function renderTierLegend(perLift) {
+    const legend = $('fhTierLegend');
+    const counts = {};
+    TIERS.forEach(t => counts[t.key] = 0);
+    Object.keys(perLift).forEach(name => {
+      const b = perLift[name];
+      const bwKg = getBodyweightKg();
+      const sexFactor = getSexFactor();
+      const ratio = b.e1rm / Math.max(1, bwKg);
+      const t = tierForRatio(ratio, b.spec.ratio * sexFactor);
+      counts[t.key]++;
+    });
+    legend.innerHTML = TIERS.slice().reverse().map(t => `
+      <div class="fh-tier-row">
+        <span class="fh-tier-dot" style="background:${t.color};"></span>
+        <span class="fh-tier-name">${t.name}</span>
+        <span class="fh-tier-count">${counts[t.key]} lift${counts[t.key] === 1 ? '' : 's'}</span>
+      </div>
+    `).join('');
+  }
+
+  // ---- Render: per-lift list ----
+  function renderLiftList(perLift) {
+    const wrap = $('fhLiftList');
+    const names = Object.keys(perLift);
+    if (names.length === 0) {
+      wrap.innerHTML = '<div class="fh-empty">Log a set in the picker below — your rankings appear here automatically.</div>';
+      return;
+    }
+    names.sort((a, b) => perLift[b].e1rm - perLift[a].e1rm);
+    const bwKg = getBodyweightKg();
+    const sexFactor = getSexFactor();
+    wrap.innerHTML = names.map(name => {
+      const b = perLift[name];
+      const ratio = b.e1rm / Math.max(1, bwKg);
+      const tgt = b.spec.ratio * sexFactor;
+      const tier = tierForRatio(ratio, tgt);
+      const fillPct = Math.min(100, tierIndexNorm(ratio, tgt) * 100);
+      return `
+        <div class="fh-lift">
+          <div class="fh-lift-name">${escapeHtml(name)}
+            <small>${b.weight} × ${b.reps} · ${(ratio).toFixed(2)}× BW</small>
+          </div>
+          <div class="fh-lift-1rm">${b.e1rm}<small>e1RM</small></div>
+          <div class="fh-lift-tier" style="background: ${tier.color}22; color: ${tier.color}; border: 1px solid ${tier.color}55;">${tier.name}</div>
+          <div class="fh-lift-bar"><div class="fh-lift-bar-fill" style="width:${fillPct.toFixed(1)}%; background: ${tier.color};"></div></div>
+        </div>`;
+    }).join('');
+  }
+
+  // ---- Render: Power Score gauge ----
+  function renderGauge(power) {
+    const C = 2 * Math.PI * 52;
+    const ratio = Math.max(0, Math.min(1, power.score / 1000));
+    const fill = $('fhGaugeFill');
+    fill.setAttribute('stroke-dasharray', C.toFixed(2));
+    fill.setAttribute('stroke-dashoffset', (C * (1 - ratio)).toFixed(2));
+    fill.setAttribute('stroke', power.tier.color);
+    $('fhScoreNum').textContent = power.score;
+    const tierPill = $('fhScoreTier');
+    tierPill.textContent = power.tier.name;
+    tierPill.style.background = power.tier.color + '22';
+    tierPill.style.color = power.tier.color;
+    tierPill.style.border = '1px solid ' + power.tier.color + '55';
+    $('fhScoreTitle').textContent = power.count > 0
+      ? 'Composite of ' + power.count + ' lift' + (power.count === 1 ? '' : 's')
+      : 'Log a set to start tracking.';
+    $('fhScoreSub').textContent = (getBodyweightKg().toFixed(1)) + ' kg BW · ' + power.count + ' lifts indexed';
+  }
+
+  // ---- Render: body-part workout picker ----
+  let currentPickerTab = 'all';
+  function getPickerExercises() {
+    // Pull from coach config and tag muscle based on name match.
+    const state = readCoachState();
+    let exs = [];
+    if (state && Array.isArray(state.exercises)) {
+      exs = state.exercises;
+    } else if (typeof CONFIG !== 'undefined' && CONFIG && Array.isArray(CONFIG.defaultExercises)) {
+      exs = CONFIG.defaultExercises;
+    }
+    return exs.map(e => {
+      const match = LIFT_TABLE.find(L => L.re.test(e.name || ''));
+      let muscle = e.muscle;
+      let equip = e.equipment;
+      if (!muscle && match) muscle = match.muscle;
+      if (!equip  && match) equip  = match.equip;
+      if (!muscle) {
+        // Fallback heuristics from day id.
+        if (e.day === 'push') muscle = 'chest';
+        else if (e.day === 'pull') muscle = 'back';
+        else if (e.day === 'legs') muscle = 'quads';
+        else muscle = 'other';
+      }
+      if (!equip) equip = e.bw ? 'bodyweight' : 'barbell';
+      return Object.assign({}, e, { muscle, equipment: equip });
+    });
+  }
+  function buildPickerTabs() {
+    const exs = getPickerExercises();
+    const tabs = $('fhPickerTabs');
+    const muscles = new Set(['all']);
+    exs.forEach(e => muscles.add(e.muscle));
+    const order = ['all'].concat(MUSCLES.map(m => m.key)).filter(k => muscles.has(k));
+    if (!muscles.has('all')) order.unshift('all');
+    tabs.innerHTML = order.map(k => {
+      const label = k === 'all' ? 'All' : (MUSCLES.find(m => m.key === k) || { label: k }).label;
+      return `<button class="fh-picker-tab${k === currentPickerTab ? ' on' : ''}" data-tab="${k}">${label}</button>`;
+    }).join('');
+    tabs.querySelectorAll('.fh-picker-tab').forEach(b => {
+      b.addEventListener('click', () => {
+        currentPickerTab = b.getAttribute('data-tab');
+        tabs.querySelectorAll('.fh-picker-tab').forEach(x => x.classList.toggle('on', x === b));
+        renderPickerList();
+      });
+    });
+  }
+  function renderPickerList() {
+    const list = $('fhPickerList');
+    const exs = getPickerExercises();
+    const filtered = currentPickerTab === 'all' ? exs : exs.filter(e => e.muscle === currentPickerTab);
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="fh-empty">No exercises tagged for this body part yet — add one in the existing exercise editor below.</div>';
+      return;
+    }
+    const bwKg = getBodyweightKg();
+    const sexFactor = getSexFactor();
+    const all = gatherAllSets();
+    list.innerHTML = filtered.map((e, idx) => {
+      const sets = all.filter(s => s.name && (s.name === e.name || s.name.toLowerCase().indexOf((e.name || '').toLowerCase()) !== -1));
+      let best = null;
+      sets.forEach(s => {
+        const e1 = epley(s.weight, s.reps);
+        if (!best || e1 > best.e1) best = { weight: s.weight, reps: s.reps, e1, date: s.date };
+      });
+      const muscleLabel = (MUSCLES.find(m => m.key === e.muscle) || { label: e.muscle }).label;
+      const chips = [
+        `<span class="fh-chip">${escapeHtml(muscleLabel)}</span>`,
+        `<span class="fh-chip">${escapeHtml(e.equipment || '')}</span>`,
+        e.bw ? '<span class="fh-chip">Bodyweight</span>' : '',
+      ].filter(Boolean).join('');
+      let statBlock = '';
+      if (best) {
+        const ratio = best.e1 / Math.max(1, bwKg);
+        const match = LIFT_TABLE.find(L => L.re.test(e.name || ''));
+        const tier = match ? tierForRatio(ratio, match.ratio * sexFactor) : null;
+        statBlock = `
+          <div class="fh-picker-stat">
+            ${best.e1}<small>e1RM</small>
+            ${tier ? `<div class="fh-lift-tier" style="margin-top:6px; background:${tier.color}22; color:${tier.color}; border:1px solid ${tier.color}55;">${tier.name}</div>` : ''}
+          </div>`;
+      } else {
+        statBlock = `<div class="fh-picker-stat" style="color: rgba(255,255,255,0.4);">—<small>no sets</small></div>`;
+      }
+      return `
+        <div class="fh-picker-card" data-name="${escapeHtml(e.name)}">
+          <div class="fh-picker-card-info">
+            <div class="fh-picker-card-name">${escapeHtml(e.name)}</div>
+            <div class="fh-picker-chips">${chips}</div>
+          </div>
+          ${statBlock}
+        </div>`;
+    }).join('');
+    list.querySelectorAll('.fh-picker-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const name = card.getAttribute('data-name');
+        scrollToExercise(name);
+      });
+    });
+  }
+
+  // Scroll the page down to the existing po-shell exercise area.
+  // The classic UI handles set logging; we just hand them off.
+  function scrollToExercise(name) {
+    const shell = document.querySelector('.po-shell');
+    if (!shell) return;
+    shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Best-effort: try to find any element containing the exercise name
+    // and highlight it briefly so the user knows where to log.
+    setTimeout(() => {
+      const candidates = shell.querySelectorAll('[data-exercise], .po-card, .ex-card, h2, h3, button');
+      for (const el of candidates) {
+        const txt = (el.textContent || '').trim().toLowerCase();
+        if (txt && name && txt.indexOf(name.toLowerCase()) !== -1) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'box-shadow 0.4s ease';
+          el.style.boxShadow = '0 0 0 3px rgba(125, 211, 252, 0.6)';
+          setTimeout(() => { el.style.boxShadow = ''; }, 1400);
+          break;
+        }
+      }
+    }, 350);
+  }
+
+  // ---- Region drawer ----
+  function openRegionDrawer(muscle, perLift) {
+    const lifts = Object.keys(perLift).filter(n => perLift[n].spec.muscle === muscle);
+    const bwKg = getBodyweightKg();
+    const sexFactor = getSexFactor();
+    $('fhDrawerTitle').textContent = (MUSCLES.find(m => m.key === muscle) || { label: muscle }).label;
+    const body = $('fhDrawerBody');
+    if (lifts.length === 0) {
+      body.innerHTML = '<div class="fh-empty">No tracked lifts for this muscle yet. Tap a workout below to log your first set.</div>';
+    } else {
+      lifts.sort((a, b) => perLift[b].e1rm - perLift[a].e1rm);
+      body.innerHTML = lifts.map(name => {
+        const b = perLift[name];
+        const ratio = b.e1rm / Math.max(1, bwKg);
+        const tier = tierForRatio(ratio, b.spec.ratio * sexFactor);
+        return `
+          <div class="fh-lift" style="margin-bottom: 6px;">
+            <div class="fh-lift-name">${escapeHtml(name)}
+              <small>${b.weight} × ${b.reps} · ${ratio.toFixed(2)}× BW</small>
+            </div>
+            <div class="fh-lift-1rm">${b.e1rm}<small>e1RM</small></div>
+            <div class="fh-lift-tier" style="background: ${tier.color}22; color: ${tier.color}; border: 1px solid ${tier.color}55;">${tier.name}</div>
+          </div>`;
+      }).join('');
+    }
+    $('fhDrawerBg').classList.add('on');
+  }
+  function closeRegionDrawer() { $('fhDrawerBg').classList.remove('on'); }
+
+  // ---- Boot ----
+  function renderAll() {
+    const sets = gatherAllSets();
+    const perLift = computeBestPerLift(sets);
+    const bwKg = getBodyweightKg();
+    const sexFactor = getSexFactor();
+    const power = computePowerScore(perLift, bwKg, sexFactor);
+    renderGauge(power);
+    renderBody(perLift);
+    renderTierLegend(perLift);
+    renderLiftList(perLift);
+    buildPickerTabs();
+    renderPickerList();
+  }
+  function wire() {
+    document.querySelectorAll('.fh-body-toggle button').forEach(b => {
+      b.addEventListener('click', () => {
+        currentView = b.getAttribute('data-fh-view');
+        document.querySelectorAll('.fh-body-toggle button').forEach(x => x.classList.toggle('on', x === b));
+        const perLift = computeBestPerLift(gatherAllSets());
+        renderBody(perLift);
+      });
+    });
+    $('fhDrawerClose').addEventListener('click', closeRegionDrawer);
+    $('fhDrawerBg').addEventListener('click', (e) => { if (e.target === $('fhDrawerBg')) closeRegionDrawer(); });
+    // Re-render when storage changes (e.g. a new set logged below).
+    window.addEventListener('storage', renderAll);
+    // Also poll occasionally to catch in-page edits that don't fire storage events.
+    setInterval(renderAll, 12000);
+  }
+  function boot() {
+    wire();
+    renderAll();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+</script>
+
 <div class="po-shell">
   <button class="po-day-pill" type="button" id="dayPill" title="Tap to switch the day filter to today's split">
     <span class="po-day-date" id="dayPillDate">—</span>
