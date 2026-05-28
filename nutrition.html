@@ -686,6 +686,277 @@ main {
 .spacer-18 { height: 18px; }
 
 /* =========================================================
+   SERVING SIZE EDITOR (bottom sheet)
+   ========================================================= */
+.nu-serv-bg {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: flex-end; justify-content: center;
+}
+.nu-serv-bg.show { display: flex; }
+.nu-serv-sheet {
+  width: 100%;
+  max-width: 520px;
+  background: #0c0c0e;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  padding: 18px 18px max(22px, env(safe-area-inset-bottom));
+  max-height: 88vh;
+  overflow-y: auto;
+  animation: nuServIn 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-primary);
+}
+@keyframes nuServIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.nu-serv-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.nu-serv-title {
+  font-size: 16px; font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+}
+.nu-serv-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+.nu-serv-close {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  color: var(--text-primary);
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  font-size: 17px; line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+/* Quick servings row */
+.nu-serv-quick {
+  display: flex; gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -2px 14px;
+  padding: 0 2px 4px;
+}
+.nu-serv-quick::-webkit-scrollbar { display: none; }
+.nu-serv-quick button {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nu-serv-quick button:active { background: rgba(255,255,255,0.10); color: var(--text-primary); }
+
+/* Amount + unit */
+.nu-serv-amount-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.nu-serv-stepper {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.nu-serv-stepper button {
+  background: var(--bg-input);
+  border: none;
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-serv-stepper button:active { background: var(--bg-input-focus); }
+.nu-serv-stepper input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  text-align: center;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.nu-serv-unit-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-tertiary) 50%),
+                    linear-gradient(135deg, var(--text-tertiary) 50%, transparent 50%);
+  background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Live preview */
+.nu-serv-preview {
+  background: rgba(20, 184, 166, 0.06);
+  border: 1px solid rgba(29, 158, 117, 0.20);
+  border-radius: 12px;
+  padding: 14px 14px;
+  margin: 4px 0 12px;
+}
+.nu-serv-mult {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.nu-serv-mult-num {
+  font-family: var(--font-mono);
+  font-size: 22px; font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.nu-serv-mult-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  margin-left: 6px;
+}
+.nu-serv-mult-cal {
+  font-family: var(--font-mono);
+  font-size: 16px; font-weight: 700;
+  color: var(--c-cal);
+  font-variant-numeric: tabular-nums;
+}
+.nu-serv-macros {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.nu-serv-macro {
+  text-align: center;
+  padding: 6px 4px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+}
+.nu-serv-macro-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.nu-serv-macro-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Standalone converter */
+.nu-serv-conv {
+  margin: 8px 0 12px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px;
+}
+.nu-serv-conv summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  list-style: none;
+  user-select: none;
+  padding: 4px 0;
+}
+.nu-serv-conv summary::after {
+  content: ' +';
+  color: var(--text-quaternary);
+}
+.nu-serv-conv[open] summary::after { content: ' −'; }
+.nu-serv-conv-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 18px 1fr;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0;
+}
+.nu-serv-conv-row > span {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.nu-serv-conv-row input,
+.nu-serv-conv-row select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.nu-serv-conv-result {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.nu-serv-conv-result.err { color: var(--bad); }
+
+/* Open editor button (inside Add Food modal) */
+.nu-serv-open-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 9px;
+  background: rgba(125, 211, 252, 0.08);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 10px;
+  color: #7DD3FC;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-serv-open-btn:active { background: rgba(125, 211, 252, 0.14); }
+
+/* =========================================================
    APPLE CENTERPIECE
    ========================================================= */
 .nu-apple-card {
@@ -1311,6 +1582,7 @@ main {
       <input type="number" id="nuQtyInput" step="0.25" min="0" value="1">
       <button type="button" id="nuQtyPlus">+</button>
     </div>
+    <button class="nu-serv-open-btn" id="nuQtyEditorBtn">Custom amount / unit</button>
     <div class="nu-label">Meal</div>
     <div class="nu-row four">
       <button class="nu-mini-btn" data-add-meal="breakfast">Breakfast</button>
@@ -1481,6 +1753,64 @@ main {
     <div class="nu-btn-row">
       <button class="nu-btn nu-btn-ghost" id="nuUpcCancelBtn">Cancel</button>
       <button class="nu-btn" id="nuUpcLookupBtn">Look up</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVING SIZE EDITOR -->
+<div class="nu-serv-bg" id="nuServBg">
+  <div class="nu-serv-sheet">
+    <div class="nu-serv-head">
+      <div>
+        <h3 class="nu-serv-title" id="nuServTitle">Adjust serving</h3>
+        <div class="nu-serv-sub" id="nuServSub">—</div>
+      </div>
+      <button class="nu-serv-close" id="nuServCloseBtn" aria-label="Close">×</button>
+    </div>
+
+    <div class="nu-label">Quick</div>
+    <div class="nu-serv-quick" id="nuServQuick"></div>
+
+    <div class="nu-label">Amount</div>
+    <div class="nu-serv-amount-row">
+      <div class="nu-serv-stepper">
+        <button type="button" id="nuServMinus">−</button>
+        <input type="number" id="nuServAmount" step="0.25" min="0" value="1">
+        <button type="button" id="nuServPlus">+</button>
+      </div>
+      <select class="nu-serv-unit-select" id="nuServUnit"></select>
+    </div>
+
+    <div class="nu-serv-preview">
+      <div class="nu-serv-mult">
+        <div>
+          <span class="nu-serv-mult-num" id="nuServMultNum">× 1.00</span>
+          <span class="nu-serv-mult-unit" id="nuServMultUnit">servings</span>
+        </div>
+        <div class="nu-serv-mult-cal" id="nuServMultCal">0 kcal</div>
+      </div>
+      <div class="nu-serv-macros">
+        <div class="nu-serv-macro"><div class="nu-serv-macro-num" id="nuServPrevP" style="color:var(--c-protein);">0</div><div class="nu-serv-macro-label">Protein g</div></div>
+        <div class="nu-serv-macro"><div class="nu-serv-macro-num" id="nuServPrevC" style="color:var(--c-carb);">0</div><div class="nu-serv-macro-label">Carbs g</div></div>
+        <div class="nu-serv-macro"><div class="nu-serv-macro-num" id="nuServPrevF" style="color:var(--c-fat);">0</div><div class="nu-serv-macro-label">Fat g</div></div>
+        <div class="nu-serv-macro"><div class="nu-serv-macro-num" id="nuServPrevFib" style="color:var(--c-fiber);">0</div><div class="nu-serv-macro-label">Fiber g</div></div>
+      </div>
+    </div>
+
+    <details class="nu-serv-conv">
+      <summary>Convert units</summary>
+      <div class="nu-serv-conv-row">
+        <input type="number" id="nuConvAmount" step="0.01" value="1">
+        <select id="nuConvFrom"></select>
+        <span>→</span>
+        <select id="nuConvTo"></select>
+      </div>
+      <div class="nu-serv-conv-result" id="nuConvResult">—</div>
+    </details>
+
+    <div class="nu-btn-row">
+      <button class="nu-btn nu-btn-ghost" id="nuServCancelBtn">Cancel</button>
+      <button class="nu-btn" id="nuServUseBtn">Use this amount</button>
     </div>
   </div>
 </div>
@@ -2552,6 +2882,225 @@ main {
   }
 
   // =============================================================
+  // SERVING SIZE EDITOR
+  //  Bottom sheet that lets the user enter "I ate X amount of Y
+  //  unit" and computes the servings multiplier vs. the food's
+  //  defined serving. Conversions cover weight, volume, count,
+  //  and restaurant sizes. The standalone converter section does
+  //  unit-only math (no food math).
+  // =============================================================
+  // Unit table: base values are mass (g) or volume (mL).
+  // Standard food-science conversions: 1 oz = 28.3495 g,
+  // 1 fl oz = 29.5735 mL, 1 US cup = 240 mL, 1 tbsp = 14.7868 mL,
+  // 1 tsp = 4.92892 mL, 1 pint = 473.176 mL, etc.
+  const NU_UNITS = {
+    weight: [
+      { key: 'g',  label: 'grams (g)',     short: 'g',  base: 1 },
+      { key: 'oz', label: 'ounces (oz)',   short: 'oz', base: 28.3495 },
+      { key: 'lb', label: 'pounds (lb)',   short: 'lb', base: 453.592 },
+      { key: 'kg', label: 'kilograms (kg)', short: 'kg', base: 1000 },
+    ],
+    volume: [
+      { key: 'ml',     label: 'milliliters (ml)', short: 'ml',     base: 1 },
+      { key: 'l',      label: 'liters (L)',       short: 'L',      base: 1000 },
+      { key: 'floz',   label: 'fluid ounces',     short: 'fl oz',  base: 29.5735 },
+      { key: 'cup',    label: 'cups',             short: 'cup',    base: 240 },
+      { key: 'tbsp',   label: 'tablespoons',      short: 'tbsp',   base: 14.7868 },
+      { key: 'tsp',    label: 'teaspoons',        short: 'tsp',    base: 4.92892 },
+      { key: 'pint',   label: 'pints',            short: 'pt',     base: 473.176 },
+      { key: 'quart',  label: 'quarts',           short: 'qt',     base: 946.353 },
+      { key: 'gallon', label: 'gallons',          short: 'gal',    base: 3785.41 },
+    ],
+    count: [
+      { key: 'serving',   label: 'serving',   short: 'serving' },
+      { key: 'piece',     label: 'piece',     short: 'pc' },
+      { key: 'slice',     label: 'slice',     short: 'slice' },
+      { key: 'handful',   label: 'handful',   short: 'handful' },
+      { key: 'scoop',     label: 'scoop',     short: 'scoop' },
+      { key: 'packet',    label: 'packet',    short: 'packet' },
+      { key: 'container', label: 'container', short: 'container' },
+      { key: 'whole',     label: 'whole',     short: 'whole' },
+      { key: 'half',      label: 'half',      short: 'half' },
+    ],
+    size: [
+      { key: 'small',  label: 'small',       short: 'small',  factor: 0.7 },
+      { key: 'medium', label: 'medium',      short: 'medium', factor: 1.0 },
+      { key: 'large',  label: 'large',       short: 'large',  factor: 1.4 },
+      { key: 'xl',     label: 'extra large', short: 'XL',     factor: 1.8 },
+    ],
+  };
+
+  function nuEscRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function nuFindUnit(key) {
+    for (const cat of Object.keys(NU_UNITS)) {
+      const u = NU_UNITS[cat].find(x => x.key === key);
+      if (u) return { unit: u, category: cat };
+    }
+    return null;
+  }
+  // Parse a serving string like "100 g", "1 cup (240 ml)", "1 slice (45 g)".
+  // Returns the most-specific match — prefers weight if present, else volume,
+  // else count, else size. Inside-parens hint counts as the canonical amount.
+  function parseFoodServing(servingStr) {
+    if (!servingStr) return { amount: 1, key: 'serving', category: 'count' };
+    const text = String(servingStr).toLowerCase();
+    // Look for "(NN g)" hint inside parens first — labels often say "1 cup (240 g)"
+    const paren = text.match(/\(([^)]+)\)/);
+    if (paren) {
+      const inside = paren[1];
+      const found = matchAmountUnit(inside);
+      if (found) return found;
+    }
+    return matchAmountUnit(text) || { amount: 1, key: 'serving', category: 'count' };
+  }
+  function matchAmountUnit(text) {
+    // Try every unit, longest key first so "tbsp" wins over "tsp" etc.
+    const all = [];
+    Object.keys(NU_UNITS).forEach(cat => NU_UNITS[cat].forEach(u => all.push({ u, cat })));
+    all.sort((a, b) => b.u.key.length - a.u.key.length);
+    for (const { u, cat } of all) {
+      const re = new RegExp('(\\d+(?:\\.\\d+)?)\\s*' + nuEscRe(u.key) + 's?\\b');
+      const m = text.match(re);
+      if (m) return { amount: parseFloat(m[1]), key: u.key, category: cat };
+    }
+    // Number without a recognized unit → treat as count
+    const plain = text.match(/(\d+(?:\.\d+)?)/);
+    if (plain) return { amount: parseFloat(plain[1]), key: 'serving', category: 'count' };
+    return null;
+  }
+  // Compute how many of the food's defined servings the user's amount represents.
+  function computeServingsMultiplier(food, userAmount, userKey) {
+    const foodServ = parseFoodServing(food.serving);
+    const userInfo = nuFindUnit(userKey);
+    if (!userInfo) return userAmount;
+    // Same category and both are weight or volume → exact conversion
+    if ((userInfo.category === 'weight' || userInfo.category === 'volume')
+        && foodServ.category === userInfo.category) {
+      const foodUnit = nuFindUnit(foodServ.key);
+      if (foodUnit) {
+        const userMl = userAmount * userInfo.unit.base;
+        const servMl = foodServ.amount * foodUnit.unit.base;
+        if (servMl > 0) return userMl / servMl;
+      }
+    }
+    // Restaurant sizes — multiply by size factor
+    if (userInfo.category === 'size' && userInfo.unit.factor != null) {
+      return userAmount * userInfo.unit.factor;
+    }
+    // Count / cross-category — user amount IS the servings multiplier
+    return userAmount;
+  }
+  // Convert across same-category weight or volume units.
+  function nuConvert(amount, fromKey, toKey) {
+    const f = nuFindUnit(fromKey);
+    const t = nuFindUnit(toKey);
+    if (!f || !t) return NaN;
+    if (f.category !== t.category) return NaN;
+    if (f.unit.base == null || t.unit.base == null) return NaN;
+    return amount * f.unit.base / t.unit.base;
+  }
+
+  // Editor state
+  let servFood = null;
+  let servAmount = 1;
+  let servUnitKey = 'serving';
+
+  function openServingEditor(food, initialMultiplier) {
+    servFood = food;
+    const parsed = parseFoodServing(food.serving);
+    servUnitKey = parsed.key;
+    servAmount = (initialMultiplier != null ? initialMultiplier : 1) * parsed.amount;
+    $('nuServTitle').textContent = food.name;
+    $('nuServSub').textContent = food.serving + ' · ' + Math.round(food.kcal) + ' kcal / serving';
+    populateUnitSelect($('nuServUnit'), servUnitKey);
+    populateUnitSelect($('nuConvFrom'), 'g');
+    populateUnitSelect($('nuConvTo'),   'oz');
+    $('nuServAmount').value = round1(servAmount);
+    $('nuConvAmount').value = 1;
+    populateQuickRow();
+    renderServingPreview();
+    renderConvertResult();
+    $('nuServBg').classList.add('show');
+  }
+  function closeServingEditor() { $('nuServBg').classList.remove('show'); }
+  function populateUnitSelect(selectEl, selectedKey) {
+    const groups = [
+      { label: 'Weight',     cat: 'weight' },
+      { label: 'Volume',     cat: 'volume' },
+      { label: 'Count',      cat: 'count'  },
+      { label: 'Size',       cat: 'size'   },
+    ];
+    selectEl.innerHTML = groups.map(g => {
+      const opts = NU_UNITS[g.cat].map(u =>
+        `<option value="${u.key}"${u.key === selectedKey ? ' selected' : ''}>${u.label}</option>`
+      ).join('');
+      return `<optgroup label="${g.label}">${opts}</optgroup>`;
+    }).join('');
+  }
+  function populateQuickRow() {
+    if (!servFood) return;
+    const quicks = [
+      { label: '½ serving',   amt: 0.5, key: 'serving' },
+      { label: '1 serving',   amt: 1,   key: 'serving' },
+      { label: '2 servings',  amt: 2,   key: 'serving' },
+      { label: '100 g',       amt: 100, key: 'g' },
+      { label: '½ cup',       amt: 0.5, key: 'cup' },
+      { label: '1 cup',       amt: 1,   key: 'cup' },
+      { label: '1 tbsp',      amt: 1,   key: 'tbsp' },
+      { label: '1 oz',        amt: 1,   key: 'oz' },
+    ];
+    const row = $('nuServQuick');
+    row.innerHTML = quicks.map((q, i) => `<button type="button" data-q="${i}">${q.label}</button>`).join('');
+    row.querySelectorAll('[data-q]').forEach(b => {
+      b.addEventListener('click', () => {
+        const q = quicks[+b.getAttribute('data-q')];
+        servAmount = q.amt;
+        servUnitKey = q.key;
+        $('nuServAmount').value = q.amt;
+        populateUnitSelect($('nuServUnit'), q.key);
+        renderServingPreview();
+      });
+    });
+  }
+  function renderServingPreview() {
+    if (!servFood) return;
+    const mult = computeServingsMultiplier(servFood, servAmount, servUnitKey);
+    $('nuServMultNum').textContent = '× ' + (mult || 0).toFixed(2);
+    const u = nuFindUnit(servUnitKey);
+    const unitShort = u ? u.unit.short : 'servings';
+    $('nuServMultUnit').textContent = unitShort;
+    $('nuServMultCal').textContent = Math.round((+servFood.kcal || 0) * mult) + ' kcal';
+    $('nuServPrevP').textContent   = round1((+servFood.p   || 0) * mult);
+    $('nuServPrevC').textContent   = round1((+servFood.c   || 0) * mult);
+    $('nuServPrevF').textContent   = round1((+servFood.f   || 0) * mult);
+    $('nuServPrevFib').textContent = round1((+servFood.fib || 0) * mult);
+  }
+  function commitServingEditor() {
+    if (!servFood) return;
+    const mult = computeServingsMultiplier(servFood, servAmount, servUnitKey);
+    if (!isFinite(mult) || mult <= 0) { toast('Pick an amount first'); return; }
+    $('nuQtyInput').value = round1(mult);
+    closeServingEditor();
+    toast('Serving updated');
+  }
+  function renderConvertResult() {
+    const amt = parseFloat($('nuConvAmount').value);
+    const from = $('nuConvFrom').value;
+    const to   = $('nuConvTo').value;
+    const resEl = $('nuConvResult');
+    if (!isFinite(amt)) { resEl.textContent = '—'; resEl.classList.remove('err'); return; }
+    const out = nuConvert(amt, from, to);
+    if (!isFinite(out)) {
+      resEl.textContent = "Can't convert across categories";
+      resEl.classList.add('err');
+      return;
+    }
+    resEl.classList.remove('err');
+    const f = nuFindUnit(from), t = nuFindUnit(to);
+    resEl.textContent = amt + ' ' + (f ? f.unit.short : from) + ' = ' + round1(out) + ' ' + (t ? t.unit.short : to);
+  }
+
+  // =============================================================
   // EVENT WIRING
   // =============================================================
   function wire() {
@@ -2609,6 +3158,41 @@ main {
     });
     $('nuQtyPlus').addEventListener('click', () => {
       const i = $('nuQtyInput'); i.value = ((parseFloat(i.value) || 0) + 0.25).toFixed(2);
+    });
+    $('nuQtyEditorBtn').addEventListener('click', () => {
+      if (!pendingAdd || !pendingAdd.food) return;
+      const cur = parseFloat($('nuQtyInput').value) || 1;
+      openServingEditor(pendingAdd.food, cur);
+    });
+
+    // Serving Size Editor
+    $('nuServCloseBtn').addEventListener('click', closeServingEditor);
+    $('nuServCancelBtn').addEventListener('click', closeServingEditor);
+    $('nuServUseBtn').addEventListener('click', commitServingEditor);
+    $('nuServMinus').addEventListener('click', () => {
+      servAmount = Math.max(0, +($('nuServAmount').value || 0) - 0.25);
+      $('nuServAmount').value = round1(servAmount);
+      renderServingPreview();
+    });
+    $('nuServPlus').addEventListener('click', () => {
+      servAmount = +($('nuServAmount').value || 0) + 0.25;
+      $('nuServAmount').value = round1(servAmount);
+      renderServingPreview();
+    });
+    $('nuServAmount').addEventListener('input', () => {
+      servAmount = parseFloat($('nuServAmount').value) || 0;
+      renderServingPreview();
+    });
+    $('nuServUnit').addEventListener('change', () => {
+      servUnitKey = $('nuServUnit').value;
+      renderServingPreview();
+    });
+    ['nuConvAmount','nuConvFrom','nuConvTo'].forEach(id => {
+      $(id).addEventListener('input', renderConvertResult);
+      $(id).addEventListener('change', renderConvertResult);
+    });
+    $('nuServBg').addEventListener('click', (e) => {
+      if (e.target === $('nuServBg')) closeServingEditor();
     });
     document.querySelectorAll('[data-add-meal]').forEach(b => {
       b.addEventListener('click', () => {
