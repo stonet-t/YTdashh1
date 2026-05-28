@@ -3281,7 +3281,7 @@ img, video, canvas, svg { max-width: 100%; }
   const SUPABASE_URL = 'https://emjlanyisgncnehnueoa.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_yk61Gobc-zRRwcSyjVYbYQ_LXehtT5t';
   const APP_KEY = 'po-coach';
-  const PC_SYNCED_KEYS = ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos'];
+  const PC_SYNCED_KEYS = ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos', 'po_coach_measurements', 'po_coach_ftx_settings'];
 
   let pcSupa = null;
   let pcPushTimer = null;
@@ -3463,6 +3463,1131 @@ img, video, canvas, svg { max-width: 100%; }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pcFlushPushOnUnload();
   });
+})();
+</script>
+
+<!-- =============================================================
+     FITNESS TOOLS EXTENSION
+     Adds: rest timer · plate calculator · PRs · calendar · measurements
+     All additive. Existing data and logic above are untouched.
+     ============================================================= -->
+<style>
+.ftx-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  font-family: var(--font);
+}
+.ftx-fab-btn {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: rgba(20, 20, 24, 0.92);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #fff;
+  font-size: 22px; line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  backdrop-filter: blur(20px);
+  transition: transform 0.15s, background 0.15s;
+}
+.ftx-fab-btn:active { transform: scale(0.92); }
+.ftx-fab-menu {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(20, 20, 24, 0.96);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 8px;
+  min-width: 200px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+}
+.ftx-fab-menu.open { display: flex; }
+.ftx-fab-item {
+  background: transparent; border: none;
+  color: #fafafa;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; gap: 10px;
+}
+.ftx-fab-item:hover, .ftx-fab-item:active { background: rgba(255,255,255,0.06); }
+.ftx-fab-icon { font-size: 17px; width: 22px; text-align: center; }
+
+/* Rest-timer pill (top of screen when running) */
+.ftx-timer-pill {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 60px);
+  left: 50%; transform: translateX(-50%);
+  z-index: 44;
+  display: none;
+  align-items: center; gap: 12px;
+  padding: 9px 16px;
+  background: rgba(20,20,24,0.96);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 16px; font-weight: 700;
+  color: #fafafa;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.4);
+  backdrop-filter: blur(20px);
+}
+.ftx-timer-pill.show { display: inline-flex; }
+.ftx-timer-pill.done {
+  color: #6ee7b7;
+  animation: ftxPulse 1.2s ease-in-out infinite;
+}
+@keyframes ftxPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(110,231,183,0.55); }
+  50%      { box-shadow: 0 0 0 8px rgba(110,231,183,0); }
+}
+.ftx-timer-num { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+.ftx-timer-btn {
+  background: transparent; border: none;
+  color: #fafafa; font-size: 14px; font-weight: 600;
+  cursor: pointer; padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Modal */
+.ftx-modal-bg {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+  font-family: var(--font);
+}
+.ftx-modal-bg.show { display: flex; }
+.ftx-modal {
+  background: #0c0c0e;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  width: 100%; max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: #fafafa;
+}
+@media (max-width: 480px) {
+  .ftx-modal-bg { padding: 0; align-items: stretch; }
+  .ftx-modal {
+    max-width: 100%; max-height: 100vh; height: 100vh;
+    border-radius: 0;
+  }
+}
+.ftx-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky; top: 0;
+  background: #0c0c0e;
+  padding-top: max(18px, env(safe-area-inset-top));
+}
+.ftx-modal-title { font-size: 17px; font-weight: 700; letter-spacing: 0.01em; }
+.ftx-modal-close {
+  background: rgba(255,255,255,0.06); border: none;
+  width: 32px; height: 32px; border-radius: 8px;
+  color: #fafafa; font-size: 18px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ftx-modal-body { padding: 18px 22px 30px; }
+
+.ftx-section {
+  margin-bottom: 18px;
+}
+.ftx-section-title {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  margin: 0 2px 10px;
+}
+.ftx-row { display: grid; gap: 8px; }
+.ftx-row.two { grid-template-columns: 1fr 1fr; }
+.ftx-row.three { grid-template-columns: 1fr 1fr 1fr; }
+.ftx-row.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.ftx-input, .ftx-select {
+  width: 100%;
+  padding: 10px 13px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: #fafafa;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.ftx-input.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+.ftx-input:focus, .ftx-select:focus { background: rgba(0,0,0,0.36); border-color: rgba(255,255,255,0.18); }
+
+.ftx-btn {
+  padding: 10px 16px;
+  background: #fafafa; color: #0c0c0e;
+  border: none; border-radius: 10px;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ftx-btn:active { transform: scale(0.98); }
+.ftx-btn.ghost {
+  background: rgba(255,255,255,0.06);
+  color: #fafafa;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.ftx-btn.danger {
+  background: rgba(255, 138, 138, 0.10);
+  color: #ff8a8a;
+  border: 1px solid rgba(255, 138, 138, 0.18);
+}
+.ftx-btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.ftx-btn-row .ftx-btn { flex: 1; min-width: 80px; }
+
+.ftx-label {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin: 10px 2px 4px;
+}
+
+/* Rest timer big display */
+.ftx-timer-display {
+  text-align: center;
+  padding: 14px 0 18px;
+}
+.ftx-timer-big {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 64px; font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: #fafafa;
+  line-height: 1;
+}
+.ftx-timer-big.done { color: #6ee7b7; }
+.ftx-timer-sub {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-top: 6px;
+}
+.ftx-presets { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+.ftx-preset {
+  padding: 9px 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: #fafafa;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ftx-preset.active { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.18); }
+
+/* Plate calculator visual */
+.ftx-pc-bar {
+  position: relative;
+  height: 88px;
+  margin: 18px 0 8px;
+}
+.ftx-pc-rod {
+  position: absolute; top: 50%; left: 0; right: 0;
+  height: 6px; background: #b0b0b6;
+  transform: translateY(-50%);
+  border-radius: 2px;
+}
+.ftx-pc-collar {
+  position: absolute; top: 50%; left: 50%;
+  width: 8px; height: 22px;
+  background: #4a4a4f;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+}
+.ftx-pc-plates {
+  position: absolute; top: 50%; left: 50%;
+  display: flex; flex-direction: row;
+  transform: translateY(-50%);
+  margin-left: 8px;
+}
+.ftx-pc-plate {
+  display: flex; align-items: center; justify-content: center;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 700;
+  font-size: 10px;
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  margin-right: 2px;
+}
+.ftx-pc-empty {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  font-size: 12px;
+  margin: 8px 0 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.ftx-pc-list {
+  list-style: none; padding: 0; margin: 8px 0 0;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.ftx-pc-list li {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  padding: 5px 9px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+}
+
+/* PR / list rows */
+.ftx-row-list { display: flex; flex-direction: column; gap: 6px; }
+.ftx-row-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+.ftx-row-item.three { grid-template-columns: 1fr auto auto; }
+.ftx-row-name { font-size: 13px; color: #fafafa; }
+.ftx-row-name small {
+  display: block; margin-top: 2px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+}
+.ftx-row-val {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px; font-weight: 700;
+  color: #fafafa;
+  font-variant-numeric: tabular-nums;
+}
+.ftx-empty {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  padding: 16px;
+  font-size: 13px;
+}
+
+/* Calendar */
+.ftx-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.ftx-cal-head {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9px; letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  padding-bottom: 4px;
+}
+.ftx-cal-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; justify-content: center;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  position: relative;
+}
+.ftx-cal-cell.empty { background: transparent; }
+.ftx-cal-cell.has { background: rgba(110, 231, 183, 0.18); color: #fafafa; }
+.ftx-cal-cell.today { outline: 1px solid rgba(255,255,255,0.4); }
+.ftx-cal-cell .ftx-cal-tag {
+  position: absolute; bottom: 2px;
+  font-size: 8px; letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+}
+.ftx-cal-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 0 10px;
+}
+.ftx-cal-month {
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Toast */
+.ftx-toast {
+  position: fixed;
+  left: 50%; bottom: 110px;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 24, 0.96);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #fafafa;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  font-family: var(--font);
+}
+.ftx-toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+</style>
+
+<!-- Floating tools -->
+<div class="ftx-fab" id="ftxFab">
+  <div class="ftx-fab-menu" id="ftxFabMenu">
+    <button class="ftx-fab-item" data-ftx-open="timer"><span class="ftx-fab-icon">⏱</span>Rest timer</button>
+    <button class="ftx-fab-item" data-ftx-open="plates"><span class="ftx-fab-icon">🥏</span>Plate calculator</button>
+    <button class="ftx-fab-item" data-ftx-open="prs"><span class="ftx-fab-icon">🏆</span>Personal records</button>
+    <button class="ftx-fab-item" data-ftx-open="cal"><span class="ftx-fab-icon">📅</span>Calendar</button>
+    <button class="ftx-fab-item" data-ftx-open="meas"><span class="ftx-fab-icon">📏</span>Measurements</button>
+  </div>
+  <button class="ftx-fab-btn" id="ftxFabBtn" aria-label="Fitness tools">⚙</button>
+</div>
+
+<!-- Persistent rest-timer pill -->
+<div class="ftx-timer-pill" id="ftxTimerPill">
+  <span class="ftx-timer-num" id="ftxTimerPillNum">0:00</span>
+  <button class="ftx-timer-btn" id="ftxTimerPillStop">Stop</button>
+</div>
+
+<!-- REST TIMER MODAL -->
+<div class="ftx-modal-bg" data-ftx-modal="timer">
+  <div class="ftx-modal">
+    <div class="ftx-modal-head">
+      <div class="ftx-modal-title">Rest timer</div>
+      <button class="ftx-modal-close" data-ftx-close>×</button>
+    </div>
+    <div class="ftx-modal-body">
+      <div class="ftx-timer-display">
+        <div class="ftx-timer-big" id="ftxTimerBig">0:00</div>
+        <div class="ftx-timer-sub" id="ftxTimerSub">Tap a preset</div>
+      </div>
+      <div class="ftx-label">Quick presets</div>
+      <div class="ftx-presets" id="ftxPresets"></div>
+      <div class="ftx-label">Custom (seconds)</div>
+      <div class="ftx-row two">
+        <input type="number" class="ftx-input mono" id="ftxTimerCustom" placeholder="e.g. 90" min="5" max="3600">
+        <button class="ftx-btn" id="ftxTimerCustomStart">Start</button>
+      </div>
+      <div class="ftx-btn-row">
+        <button class="ftx-btn ghost" id="ftxTimerPause">Pause</button>
+        <button class="ftx-btn ghost" id="ftxTimerReset">Reset</button>
+      </div>
+      <div class="ftx-label" style="margin-top: 18px;">Sound on finish</div>
+      <div class="ftx-row two">
+        <button class="ftx-btn ghost" id="ftxTimerSoundToggle">—</button>
+        <button class="ftx-btn ghost" id="ftxTimerVibToggle">—</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLATE CALCULATOR MODAL -->
+<div class="ftx-modal-bg" data-ftx-modal="plates">
+  <div class="ftx-modal">
+    <div class="ftx-modal-head">
+      <div class="ftx-modal-title">Plate calculator</div>
+      <button class="ftx-modal-close" data-ftx-close>×</button>
+    </div>
+    <div class="ftx-modal-body">
+      <div class="ftx-label">Target total weight</div>
+      <div class="ftx-row two">
+        <input type="number" step="0.5" class="ftx-input mono" id="ftxPcTarget" placeholder="100">
+        <select class="ftx-select" id="ftxPcUnit">
+          <option value="kg">kg</option>
+          <option value="lb">lb</option>
+        </select>
+      </div>
+      <div class="ftx-label">Bar weight</div>
+      <input type="number" step="0.5" class="ftx-input mono" id="ftxPcBar" placeholder="20">
+      <div class="ftx-label">Available plates (per side)</div>
+      <input type="text" class="ftx-input mono" id="ftxPcPlates" placeholder="e.g. 25, 20, 15, 10, 5, 2.5, 1.25">
+      <div class="ftx-pc-bar" id="ftxPcVisual">
+        <div class="ftx-pc-rod"></div>
+        <div class="ftx-pc-plates" id="ftxPcPlateStack"></div>
+        <div class="ftx-pc-collar"></div>
+      </div>
+      <div class="ftx-pc-empty" id="ftxPcReadout">—</div>
+      <ul class="ftx-pc-list" id="ftxPcList"></ul>
+      <div class="ftx-btn-row">
+        <button class="ftx-btn ghost" id="ftxPcCalc">Calculate</button>
+        <button class="ftx-btn ghost" id="ftxPcSave">Save defaults</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRs MODAL -->
+<div class="ftx-modal-bg" data-ftx-modal="prs">
+  <div class="ftx-modal">
+    <div class="ftx-modal-head">
+      <div class="ftx-modal-title">Personal records</div>
+      <button class="ftx-modal-close" data-ftx-close>×</button>
+    </div>
+    <div class="ftx-modal-body">
+      <div class="ftx-label">Top weight per exercise (with estimated 1RM)</div>
+      <div class="ftx-row-list" id="ftxPrList"></div>
+      <div class="ftx-label" style="margin-top: 14px;">Recent set PRs (this month)</div>
+      <div class="ftx-row-list" id="ftxPrRecent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="ftx-modal-bg" data-ftx-modal="cal">
+  <div class="ftx-modal">
+    <div class="ftx-modal-head">
+      <div class="ftx-modal-title">Workout calendar</div>
+      <button class="ftx-modal-close" data-ftx-close>×</button>
+    </div>
+    <div class="ftx-modal-body">
+      <div class="ftx-cal-nav">
+        <button class="ftx-btn ghost" id="ftxCalPrev">‹</button>
+        <div class="ftx-cal-month" id="ftxCalMonth">—</div>
+        <button class="ftx-btn ghost" id="ftxCalNext">›</button>
+      </div>
+      <div class="ftx-cal" id="ftxCalGrid"></div>
+      <div class="ftx-label" style="margin-top: 14px;">Summary</div>
+      <div class="ftx-row-list" id="ftxCalSummary"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MEASUREMENTS MODAL -->
+<div class="ftx-modal-bg" data-ftx-modal="meas">
+  <div class="ftx-modal">
+    <div class="ftx-modal-head">
+      <div class="ftx-modal-title">Body measurements</div>
+      <button class="ftx-modal-close" data-ftx-close>×</button>
+    </div>
+    <div class="ftx-modal-body">
+      <div class="ftx-label">Log new entry</div>
+      <div class="ftx-row three">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasChest" placeholder="Chest">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasWaist" placeholder="Waist">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasHip" placeholder="Hip">
+      </div>
+      <div class="ftx-row four">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasArm" placeholder="Arm">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasThigh" placeholder="Thigh">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasNeck" placeholder="Neck">
+        <input type="number" step="0.1" class="ftx-input mono" id="ftxMeasCalf" placeholder="Calf">
+      </div>
+      <div class="ftx-btn-row">
+        <button class="ftx-btn" id="ftxMeasSave">Log measurements</button>
+      </div>
+      <div class="ftx-label" style="margin-top: 14px;">History (latest first)</div>
+      <div class="ftx-row-list" id="ftxMeasList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ftx-toast" id="ftxToast"></div>
+
+<script>
+'use strict';
+(function () {
+  // ===========================================================
+  // FITNESS TOOLS — additive extension. Reads existing keys:
+  //   po_coach_v1, po_coach_workout_done, po_coach_weights
+  // Writes only:
+  //   po_coach_measurements         — body measurements log
+  //   po_coach_ftx_settings         — plate calc + timer prefs
+  // ===========================================================
+  const KEY_MEAS = 'po_coach_measurements';
+  const KEY_SETTINGS = 'po_coach_ftx_settings';
+
+  function $(id) { return document.getElementById(id); }
+  function storeGet(k, fb) {
+    try { const r = localStorage.getItem(k); if (r == null) return fb; return JSON.parse(r); }
+    catch (e) { return fb; }
+  }
+  function storeSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function newId() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  let toastTimer = null;
+  function toast(msg) {
+    const el = $('ftxToast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 1700);
+  }
+
+  // ===========================================================
+  // SETTINGS
+  // ===========================================================
+  const DEFAULT_SETTINGS = {
+    timer: { presets: [60, 90, 120, 180], soundOn: true, vibrateOn: true },
+    plates: { unit: 'kg', bar: 20, plates: '25, 20, 15, 10, 5, 2.5, 1.25' },
+  };
+  function getSettings() {
+    const s = storeGet(KEY_SETTINGS, null);
+    if (!s) return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+    return {
+      timer:  Object.assign({}, DEFAULT_SETTINGS.timer, s.timer || {}),
+      plates: Object.assign({}, DEFAULT_SETTINGS.plates, s.plates || {}),
+    };
+  }
+  function saveSettings(s) { storeSet(KEY_SETTINGS, s); }
+
+  // ===========================================================
+  // FAB
+  // ===========================================================
+  function wireFab() {
+    const btn = $('ftxFabBtn');
+    const menu = $('ftxFabMenu');
+    btn.addEventListener('click', () => menu.classList.toggle('open'));
+    document.addEventListener('click', (e) => {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('open');
+    });
+    document.querySelectorAll('[data-ftx-open]').forEach(b => {
+      b.addEventListener('click', () => {
+        menu.classList.remove('open');
+        openModal(b.getAttribute('data-ftx-open'));
+      });
+    });
+    document.querySelectorAll('[data-ftx-close]').forEach(b => {
+      b.addEventListener('click', () => closeAllModals());
+    });
+    document.querySelectorAll('.ftx-modal-bg').forEach(m => {
+      m.addEventListener('click', (e) => { if (e.target === m) closeAllModals(); });
+    });
+  }
+  function openModal(key) {
+    closeAllModals();
+    const m = document.querySelector('.ftx-modal-bg[data-ftx-modal="' + key + '"]');
+    if (!m) return;
+    m.classList.add('show');
+    if (key === 'timer') renderTimerUI();
+    if (key === 'plates') renderPlatesUI();
+    if (key === 'prs') renderPRs();
+    if (key === 'cal') renderCalendar();
+    if (key === 'meas') renderMeasurements();
+  }
+  function closeAllModals() {
+    document.querySelectorAll('.ftx-modal-bg').forEach(m => m.classList.remove('show'));
+  }
+
+  // ===========================================================
+  // REST TIMER
+  // ===========================================================
+  let timerRemaining = 0;        // seconds
+  let timerTotal = 0;
+  let timerRunning = false;
+  let timerDone = false;
+  let timerHandle = null;
+  let timerLastTick = 0;
+  let audioCtx = null;
+
+  function fmtTime(s) {
+    s = Math.max(0, Math.round(s));
+    const m = Math.floor(s / 60);
+    const sec = s - m * 60;
+    return m + ':' + String(sec).padStart(2, '0');
+  }
+  function renderTimerUI() {
+    const big = $('ftxTimerBig');
+    big.textContent = fmtTime(timerRemaining);
+    big.classList.toggle('done', timerDone);
+    const sub = $('ftxTimerSub');
+    if (timerDone) sub.textContent = 'Done — get ready';
+    else if (timerRunning) sub.textContent = 'Running';
+    else if (timerTotal > 0) sub.textContent = 'Paused at ' + fmtTime(timerRemaining);
+    else sub.textContent = 'Tap a preset';
+    const s = getSettings();
+    const presetsEl = $('ftxPresets');
+    presetsEl.innerHTML = s.timer.presets.map(sec =>
+      `<button class="ftx-preset${(timerTotal === sec ? ' active' : '')}" data-preset="${sec}">${fmtTime(sec)}</button>`
+    ).join('');
+    presetsEl.querySelectorAll('[data-preset]').forEach(b => {
+      b.addEventListener('click', () => startTimer(+b.getAttribute('data-preset')));
+    });
+    $('ftxTimerPause').textContent = timerRunning ? 'Pause' : 'Resume';
+    $('ftxTimerSoundToggle').textContent = 'Sound: ' + (s.timer.soundOn ? 'on' : 'off');
+    $('ftxTimerVibToggle').textContent  = 'Vibrate: ' + (s.timer.vibrateOn ? 'on' : 'off');
+  }
+  function renderTimerPill() {
+    const pill = $('ftxTimerPill');
+    if (timerTotal > 0) {
+      pill.classList.add('show');
+      pill.classList.toggle('done', timerDone);
+      $('ftxTimerPillNum').textContent = timerDone ? 'Done' : fmtTime(timerRemaining);
+    } else {
+      pill.classList.remove('show');
+    }
+  }
+  function startTimer(seconds) {
+    if (!seconds || seconds <= 0) return;
+    timerTotal = seconds;
+    timerRemaining = seconds;
+    timerRunning = true;
+    timerDone = false;
+    timerLastTick = Date.now();
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(tick, 250);
+    renderTimerUI();
+    renderTimerPill();
+  }
+  function tick() {
+    if (!timerRunning) return;
+    const now = Date.now();
+    const dt = (now - timerLastTick) / 1000;
+    timerLastTick = now;
+    timerRemaining -= dt;
+    if (timerRemaining <= 0) {
+      timerRemaining = 0;
+      timerRunning = false;
+      timerDone = true;
+      clearInterval(timerHandle); timerHandle = null;
+      onTimerFinish();
+    }
+    renderTimerUI();
+    renderTimerPill();
+  }
+  function pauseTimer() {
+    if (!timerRunning && timerTotal > 0 && !timerDone) {
+      // resume
+      timerRunning = true;
+      timerLastTick = Date.now();
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = setInterval(tick, 250);
+    } else {
+      timerRunning = false;
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = null;
+    }
+    renderTimerUI();
+    renderTimerPill();
+  }
+  function resetTimer() {
+    timerRunning = false;
+    timerDone = false;
+    timerRemaining = 0;
+    timerTotal = 0;
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = null;
+    renderTimerUI();
+    renderTimerPill();
+  }
+  function onTimerFinish() {
+    const s = getSettings();
+    if (s.timer.soundOn) playBeep();
+    if (s.timer.vibrateOn && navigator.vibrate) {
+      try { navigator.vibrate([200, 80, 200]); } catch (e) {}
+    }
+  }
+  function playBeep() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtx;
+      const beep = (t, freq, dur) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.frequency.value = freq;
+        o.type = 'sine';
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0, ctx.currentTime + t);
+        g.gain.linearRampToValueAtTime(0.18, ctx.currentTime + t + 0.01);
+        g.gain.linearRampToValueAtTime(0, ctx.currentTime + t + dur);
+        o.start(ctx.currentTime + t);
+        o.stop(ctx.currentTime + t + dur + 0.02);
+      };
+      beep(0, 880, 0.15);
+      beep(0.20, 880, 0.15);
+      beep(0.40, 1320, 0.25);
+    } catch (e) {}
+  }
+  function wireTimer() {
+    $('ftxTimerPause').addEventListener('click', pauseTimer);
+    $('ftxTimerReset').addEventListener('click', resetTimer);
+    $('ftxTimerCustomStart').addEventListener('click', () => {
+      const v = parseFloat($('ftxTimerCustom').value);
+      if (!v || v < 1) { toast('Enter seconds'); return; }
+      startTimer(Math.round(v));
+    });
+    $('ftxTimerCustom').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $('ftxTimerCustomStart').click();
+    });
+    $('ftxTimerSoundToggle').addEventListener('click', () => {
+      const s = getSettings();
+      s.timer.soundOn = !s.timer.soundOn;
+      saveSettings(s);
+      renderTimerUI();
+    });
+    $('ftxTimerVibToggle').addEventListener('click', () => {
+      const s = getSettings();
+      s.timer.vibrateOn = !s.timer.vibrateOn;
+      saveSettings(s);
+      renderTimerUI();
+    });
+    $('ftxTimerPillStop').addEventListener('click', resetTimer);
+  }
+
+  // ===========================================================
+  // PLATE CALCULATOR
+  // ===========================================================
+  function parsePlateList(str) {
+    return String(str || '')
+      .split(/[,\s]+/)
+      .map(x => parseFloat(x))
+      .filter(x => !isNaN(x) && x > 0)
+      .sort((a, b) => b - a);
+  }
+  function calcPlates(target, bar, available) {
+    const perSide = (target - bar) / 2;
+    if (perSide < 0) return { perSide: 0, plates: [], leftover: target - bar };
+    let remaining = perSide;
+    const used = [];
+    for (const p of available) {
+      while (remaining + 1e-6 >= p) {
+        used.push(p);
+        remaining -= p;
+      }
+    }
+    return { perSide, plates: used, leftover: Math.round(remaining * 1000) / 1000 };
+  }
+  function plateColor(p) {
+    // Color-coded by approximate IPF plate convention
+    if (p >= 25 || p >= 45) return '#c53e3e';
+    if (p >= 20 || p >= 35) return '#3266c8';
+    if (p >= 15)            return '#d4a013';
+    if (p >= 10)            return '#1a8a3a';
+    if (p >= 5)             return '#222';
+    return '#777';
+  }
+  function plateSize(p) {
+    if (p >= 20) return { w: 14, h: 78 };
+    if (p >= 15) return { w: 12, h: 70 };
+    if (p >= 10) return { w: 11, h: 62 };
+    if (p >= 5)  return { w: 10, h: 50 };
+    if (p >= 2.5) return { w: 9, h: 38 };
+    return { w: 8, h: 28 };
+  }
+  function renderPlatesUI() {
+    const s = getSettings();
+    if (!$('ftxPcTarget').value) $('ftxPcTarget').value = '';
+    $('ftxPcBar').value = s.plates.bar;
+    $('ftxPcUnit').value = s.plates.unit;
+    $('ftxPcPlates').value = s.plates.plates;
+    drawPlates();
+  }
+  function drawPlates() {
+    const target = parseFloat($('ftxPcTarget').value);
+    const bar = parseFloat($('ftxPcBar').value);
+    const available = parsePlateList($('ftxPcPlates').value);
+    const stack = $('ftxPcPlateStack');
+    const readout = $('ftxPcReadout');
+    const list = $('ftxPcList');
+    if (isNaN(target) || isNaN(bar)) {
+      stack.innerHTML = '';
+      readout.textContent = 'Enter a target weight and bar weight';
+      list.innerHTML = '';
+      return;
+    }
+    const res = calcPlates(target, bar, available);
+    if (res.perSide <= 0) {
+      stack.innerHTML = '';
+      readout.textContent = 'Target ≤ bar weight';
+      list.innerHTML = '';
+      return;
+    }
+    stack.innerHTML = res.plates.map(p => {
+      const sz = plateSize(p);
+      return `<div class="ftx-pc-plate" style="width:${sz.w}px;height:${sz.h}px;background:${plateColor(p)};">${p}</div>`;
+    }).join('');
+    const unit = $('ftxPcUnit').value;
+    const total = bar + 2 * (res.perSide - res.leftover);
+    const counts = {};
+    res.plates.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
+    list.innerHTML = Object.keys(counts).map(p => `<li>${counts[p]}× ${p} ${unit}</li>`).join('');
+    readout.textContent = res.leftover > 0
+      ? `Per side: ${res.perSide.toFixed(2)} ${unit} (loaded ${(res.perSide - res.leftover).toFixed(2)} — short ${res.leftover.toFixed(2)})`
+      : `Per side: ${res.perSide.toFixed(2)} ${unit} · Total ${total.toFixed(2)} ${unit}`;
+  }
+  function wirePlates() {
+    ['ftxPcTarget', 'ftxPcBar', 'ftxPcPlates', 'ftxPcUnit'].forEach(id => {
+      $(id).addEventListener('input', drawPlates);
+      $(id).addEventListener('change', drawPlates);
+    });
+    $('ftxPcCalc').addEventListener('click', drawPlates);
+    $('ftxPcSave').addEventListener('click', () => {
+      const s = getSettings();
+      s.plates = {
+        unit: $('ftxPcUnit').value,
+        bar: parseFloat($('ftxPcBar').value) || 20,
+        plates: $('ftxPcPlates').value,
+      };
+      saveSettings(s);
+      toast('Defaults saved');
+    });
+  }
+
+  // ===========================================================
+  // PERSONAL RECORDS
+  //  Reads the existing po_coach_v1 state which contains:
+  //    state.history[exerciseKey] = [{ date, weight, reps, ... }, ...]
+  //  Falls back to scanning whatever shape exists.
+  // ===========================================================
+  function readCoachState() {
+    const s = storeGet('po_coach_v1', null);
+    return (s && typeof s === 'object') ? s : null;
+  }
+  function epley1RM(weight, reps) {
+    if (!weight || !reps || reps < 1) return 0;
+    if (reps === 1) return weight;
+    return Math.round(weight * (1 + reps / 30) * 10) / 10;
+  }
+  function gatherAllSets() {
+    // Flatten any object/array nested in po_coach_v1 that looks like a set entry.
+    const out = [];
+    const s = readCoachState();
+    if (!s) return out;
+    function walk(node, path) {
+      if (node == null) return;
+      if (Array.isArray(node)) {
+        node.forEach((v, i) => walk(v, path.concat(i)));
+        return;
+      }
+      if (typeof node !== 'object') return;
+      const w = node.weight != null ? +node.weight : (node.kg != null ? +node.kg : (node.lb != null ? +node.lb : NaN));
+      const r = node.reps != null ? +node.reps : NaN;
+      if (!isNaN(w) && !isNaN(r) && w >= 0 && r > 0) {
+        const date = node.date || node.day || node.ts || node.timestamp || null;
+        const name = node.exercise || node.name || pickExerciseFromPath(path, s) || '(unknown)';
+        out.push({ name, weight: w, reps: r, date });
+      }
+      Object.keys(node).forEach(k => walk(node[k], path.concat(k)));
+    }
+    walk(s, []);
+    return out;
+  }
+  function pickExerciseFromPath(path, s) {
+    // Try to recover an exercise name from the path keys.
+    for (let i = path.length - 1; i >= 0; i--) {
+      const k = path[i];
+      if (typeof k === 'string' && /[a-z]/i.test(k) && k !== 'history' && k !== 'logs' && k !== 'sessions') {
+        return k.replace(/_/g, ' ');
+      }
+    }
+    return null;
+  }
+  function renderPRs() {
+    const sets = gatherAllSets();
+    const top = {}; // name -> { weight, reps, e1rm, date }
+    const recent = [];
+    const cutoff = Date.now() - 31 * 86400 * 1000;
+    sets.forEach(s => {
+      const e = epley1RM(s.weight, s.reps);
+      const cur = top[s.name];
+      if (!cur || e > cur.e1rm) top[s.name] = { weight: s.weight, reps: s.reps, e1rm: e, date: s.date };
+      const tsMs = +new Date(s.date);
+      if (!isNaN(tsMs) && tsMs >= cutoff) {
+        recent.push({ name: s.name, weight: s.weight, reps: s.reps, e1rm: e, date: s.date });
+      }
+    });
+    const list = $('ftxPrList');
+    const names = Object.keys(top).sort((a, b) => top[b].e1rm - top[a].e1rm);
+    if (names.length === 0) {
+      list.innerHTML = '<div class="ftx-empty">No logged sets yet</div>';
+    } else {
+      list.innerHTML = names.map(n => {
+        const r = top[n];
+        return `<div class="ftx-row-item">
+          <div class="ftx-row-name">${escapeHtml(n)}<small>${r.weight} × ${r.reps} · ${r.date || ''}</small></div>
+          <div class="ftx-row-val">${r.e1rm} <small style="opacity:.5;">e1RM</small></div>
+        </div>`;
+      }).join('');
+    }
+    const recentEl = $('ftxPrRecent');
+    if (recent.length === 0) {
+      recentEl.innerHTML = '<div class="ftx-empty">No sets in last 31 days</div>';
+    } else {
+      recent.sort((a, b) => b.e1rm - a.e1rm);
+      recentEl.innerHTML = recent.slice(0, 20).map(r => `
+        <div class="ftx-row-item">
+          <div class="ftx-row-name">${escapeHtml(r.name)}<small>${r.weight} × ${r.reps} · ${r.date || ''}</small></div>
+          <div class="ftx-row-val">${r.e1rm}</div>
+        </div>`).join('');
+    }
+  }
+
+  // ===========================================================
+  // CALENDAR
+  // ===========================================================
+  let calCursor = (function () {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() };
+  })();
+  function readWorkoutDays() {
+    // po_coach_workout_done keys appear to be either {dateKey: true} or {dateKey: {...}}
+    const d = storeGet('po_coach_workout_done', null);
+    const out = {};
+    if (d && typeof d === 'object') {
+      Object.keys(d).forEach(k => {
+        if (/^\d{4}-\d{2}-\d{2}/.test(k)) out[k] = d[k];
+      });
+    }
+    // Also count any date in po_coach_v1 sets as a workout day
+    gatherAllSets().forEach(s => {
+      if (s.date && typeof s.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s.date)) {
+        const day = s.date.slice(0, 10);
+        if (!out[day]) out[day] = true;
+      } else if (s.date && +new Date(s.date)) {
+        const dt = new Date(+new Date(s.date));
+        const key = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+        if (!out[key]) out[key] = true;
+      }
+    });
+    return out;
+  }
+  function renderCalendar() {
+    const days = readWorkoutDays();
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    $('ftxCalMonth').textContent = monthNames[calCursor.m] + ' ' + calCursor.y;
+    const first = new Date(calCursor.y, calCursor.m, 1);
+    const firstDow = first.getDay();
+    const daysInMonth = new Date(calCursor.y, calCursor.m + 1, 0).getDate();
+    const grid = $('ftxCalGrid');
+    const heads = ['S','M','T','W','T','F','S'].map(h => `<div class="ftx-cal-head">${h}</div>`).join('');
+    const cells = [];
+    for (let i = 0; i < firstDow; i++) cells.push(`<div class="ftx-cal-cell empty"></div>`);
+    const today = todayKey();
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = calCursor.y + '-' + String(calCursor.m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const has = !!days[key];
+      if (has) count++;
+      const isToday = key === today;
+      cells.push(`<div class="ftx-cal-cell${has ? ' has' : ''}${isToday ? ' today' : ''}">${d}</div>`);
+    }
+    grid.innerHTML = heads + cells.join('');
+    const summary = $('ftxCalSummary');
+    const totalDays = daysInMonth;
+    const pct = Math.round(count / totalDays * 100);
+    summary.innerHTML = `
+      <div class="ftx-row-item"><div class="ftx-row-name">Workouts this month</div><div class="ftx-row-val">${count} / ${totalDays}</div></div>
+      <div class="ftx-row-item"><div class="ftx-row-name">Frequency</div><div class="ftx-row-val">${pct}%</div></div>`;
+  }
+  function wireCalendar() {
+    $('ftxCalPrev').addEventListener('click', () => {
+      calCursor.m -= 1;
+      if (calCursor.m < 0) { calCursor.m = 11; calCursor.y -= 1; }
+      renderCalendar();
+    });
+    $('ftxCalNext').addEventListener('click', () => {
+      calCursor.m += 1;
+      if (calCursor.m > 11) { calCursor.m = 0; calCursor.y += 1; }
+      renderCalendar();
+    });
+  }
+
+  // ===========================================================
+  // MEASUREMENTS
+  // ===========================================================
+  function getMeasurements() { return storeGet(KEY_MEAS, []) || []; }
+  function setMeasurements(arr) { storeSet(KEY_MEAS, arr); }
+  function renderMeasurements() {
+    const arr = getMeasurements();
+    const list = $('ftxMeasList');
+    if (arr.length === 0) {
+      list.innerHTML = '<div class="ftx-empty">No entries yet</div>';
+      return;
+    }
+    list.innerHTML = arr.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(e => {
+      const parts = [];
+      if (e.chest) parts.push('Chest ' + e.chest);
+      if (e.waist) parts.push('Waist ' + e.waist);
+      if (e.hip)   parts.push('Hip ' + e.hip);
+      if (e.arm)   parts.push('Arm ' + e.arm);
+      if (e.thigh) parts.push('Thigh ' + e.thigh);
+      if (e.neck)  parts.push('Neck ' + e.neck);
+      if (e.calf)  parts.push('Calf ' + e.calf);
+      return `
+        <div class="ftx-row-item three">
+          <div class="ftx-row-name">${escapeHtml(e.date || '')}<small>${parts.join(' · ')}</small></div>
+          <div class="ftx-row-val"></div>
+          <button class="ftx-btn ghost" data-meas-del="${e.id}" style="padding:5px 10px;font-size:12px;">×</button>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-meas-del]').forEach(b => {
+      b.addEventListener('click', () => {
+        const id = b.getAttribute('data-meas-del');
+        if (!confirm('Delete this entry?')) return;
+        setMeasurements(getMeasurements().filter(e => e.id !== id));
+        renderMeasurements();
+      });
+    });
+  }
+  function wireMeasurements() {
+    $('ftxMeasSave').addEventListener('click', () => {
+      const e = {
+        id: newId(),
+        date: todayKey(),
+        chest: parseFloat($('ftxMeasChest').value) || null,
+        waist: parseFloat($('ftxMeasWaist').value) || null,
+        hip:   parseFloat($('ftxMeasHip').value)   || null,
+        arm:   parseFloat($('ftxMeasArm').value)   || null,
+        thigh: parseFloat($('ftxMeasThigh').value) || null,
+        neck:  parseFloat($('ftxMeasNeck').value)  || null,
+        calf:  parseFloat($('ftxMeasCalf').value)  || null,
+        ts: Date.now(),
+      };
+      const has = ['chest','waist','hip','arm','thigh','neck','calf'].some(k => e[k] != null);
+      if (!has) { toast('Enter at least one'); return; }
+      const arr = getMeasurements();
+      arr.push(e);
+      setMeasurements(arr);
+      ['Chest','Waist','Hip','Arm','Thigh','Neck','Calf'].forEach(n => {
+        $('ftxMeas' + n).value = '';
+      });
+      renderMeasurements();
+      toast('Logged');
+    });
+  }
+
+  // ===========================================================
+  // BOOT
+  // ===========================================================
+  function boot() {
+    wireFab();
+    wireTimer();
+    wirePlates();
+    wireCalendar();
+    wireMeasurements();
+
+    // The existing page already wires its own sync for po_coach_* keys
+    // (see PC_SYNCED_KEYS earlier). Add the new keys to that list too.
+    try {
+      if (window.localStorage) {
+        // We rely on the existing sync rewrapping setItem to push changes;
+        // our writes will trigger that for keys it matches. But it only
+        // matches po_coach_v1 / done / weights / photos. Bolt on a tiny
+        // shim that re-uses the existing initCloudSync (sync.js) for
+        // additional keys, since gym.html doesn't include sync.js by default.
+      }
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
 })();
 </script>
 
